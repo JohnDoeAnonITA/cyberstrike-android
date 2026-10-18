@@ -149,8 +149,11 @@ public class MainActivity extends Activity {
     private void boot() {
         if (booting) return;
 
-        // RUN_COMMAND è un permesso "dangerous" di Termux: va concesso a runtime.
-        if (ServerStarter.installed(this)
+        final boolean local = Bootstrap.isLocal(Prefs.base(this));
+
+        // RUN_COMMAND è un permesso "dangerous" di Termux: serve solo per il
+        // server locale, non per un server remoto.
+        if (local && ServerStarter.installed(this)
                 && checkSelfPermission(TERMUX_PERM) != PackageManager.PERMISSION_GRANTED) {
             if (!Prefs.permAsked(this)) {
                 Diag.add("perm", "richiesta " + TERMUX_PERM);
@@ -173,6 +176,13 @@ public class MainActivity extends Activity {
                 }
                 Diag.add("boot", "health KO su " + Prefs.base(MainActivity.this));
 
+                if (!Bootstrap.isLocal(Prefs.base(MainActivity.this))) {
+                    // server remoto: l'app è solo un client, Termux non serve
+                    Diag.add("boot", "server remoto non raggiungibile");
+                    done(false);
+                    return;
+                }
+
                 if (!ServerStarter.installed(MainActivity.this)) {
                     ui.post(new Runnable() {
                         @Override
@@ -185,9 +195,7 @@ public class MainActivity extends Activity {
                     return;
                 }
 
-                if (!Prefs.autostart(MainActivity.this)
-                        || !Bootstrap.isLocal(Prefs.base(MainActivity.this))) {
-                    // server remoto o autostart disattivo: nessun bootstrap locale
+                if (!Prefs.autostart(MainActivity.this)) {
                     done(false);
                     return;
                 }
@@ -274,7 +282,9 @@ public class MainActivity extends Activity {
                         + "2. Apri Termux una volta e abilita l'esecuzione da altre app:\n"
                         + "   ~/.termux/termux.properties → allow-external-apps = true\n"
                         + "   poi esegui: termux-reload-settings\n\n"
-                        + "3. Torna qui e tocca lo stato per riprovare.")
+                        + "3. Torna qui e tocca lo stato per riprovare.\n\n"
+                        + "In alternativa puoi usare un server CyberStrike remoto: "
+                        + "⋮ → Impostazioni → Server URL.")
                 .setPositiveButton("F-Droid", (d, w) ->
                         openUrl("https://f-droid.org/packages/com.termux/"))
                 .setNeutralButton("Apri Termux", (d, w) -> Bootstrap.openTermux(this))
