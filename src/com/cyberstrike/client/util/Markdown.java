@@ -13,6 +13,8 @@ import android.text.style.URLSpan;
 import android.text.style.UnderlineSpan;
 import android.util.LruCache;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -20,7 +22,7 @@ import java.util.regex.Pattern;
  * Renderer Markdown minimale per i messaggi della chat.
  * Supporta: **grassetto**, *corsivo*, `codice`, blocchi ```…```, titoli #,
  * liste - e 1., citazioni >, righe orizzontali, ~~barrato~~, link [testo](url)
- * e URL automatici, tabelle in pipe (rese in monospace).
+ * e URL automatici, tabelle pipe (impaginate sulla larghezza disponibile).
  */
 public final class Markdown {
 
@@ -29,27 +31,38 @@ public final class Markdown {
     private static final int C_LINK = 0xFF00E676;
     private static final int C_DIM = 0xFF6E8F7C;
     private static final int C_HEAD = 0xFF00E676;
+    private static final int C_TABLE = 0xFFB8D9C6;
 
     private static final Pattern UL = Pattern.compile("^([-*+])\\s+(.*)$");
     private static final Pattern OL = Pattern.compile("^(\\d+[.)])\\s+(.*)$");
-    private static final Pattern TABLE_SEP = Pattern.compile("^\\|?[\\s:|-]+\\|[\\s:|-]*$");
+    private static final Pattern LINK = Pattern.compile("\\[([^\\]]+)\\]\\([^)]*\\)");
+    private static final Pattern BOLD2 = Pattern.compile("\\*\\*(.+?)\\*\\*");
+    private static final Pattern BOLD_ = Pattern.compile("__(.+?)__");
 
     private static final LruCache<String, CharSequence> CACHE = new LruCache<>(24);
 
     private Markdown() {
     }
 
-    /** Converte Markdown in testo formattato (con cache). */
-    public static CharSequence render(String md) {
+    /** Converte Markdown in testo formattato; cols = caratteri per riga disponibili. */
+    public static CharSequence render(String md, int cols) {
         if (md == null || md.isEmpty()) return "";
-        CharSequence hit = CACHE.get(md);
+        int width = Math.max(20, cols);
+        String key = width + "\u0000" + md;
+        CharSequence hit = CACHE.get(key);
         if (hit != null) return hit;
-        CharSequence out = build(md);
-        CACHE.put(md, out);
+        CharSequence out = build(md, width);
+        CACHE.put(key, out);
         return out;
     }
 
-    private static CharSequence build(String src) {
+    public static CharSequence render(String md) {
+        return render(md, 40);
+    }
+
+    // ------------------------------------------------------------------ build
+
+    private static CharSequence build(String src, int cols) {
         String s = src.replace("\r\n", "\n").replace('\r', '\n');
         String[] lines = s.split("\n", -1);
         SpannableStringBuilder out = new SpannableStringBuilder();
@@ -71,6 +84,26 @@ public final class Markdown {
 
             if (t.isEmpty()) {
                 out.append('\n');
+                continue;
+            }
+
+            // tabella: riga corrente + riga separatrice subito dopo
+            if (t.indexOf('|') >= 0 && i + 1 < lines.length
+                    && isSeparator(lines[i + 1].trim())) {
+                int j = i;
+                List<String[]> rows = new ArrayList<>();
+                while (j < lines.length) {
+                    String tl = lines[j].trim();
+                    if (tl.isEmpty() || tl.indexOf('|') < 0) break;
+                    if (isSeparator(tl)) {
+                        j++;
+                        continue;
+                    }
+                    rows.add(splitRow(tl));
+                    j++;
+                }
+                appendTable(out, rows, cols);
+                i = j - 1;
                 continue;
             }
 
@@ -117,33 +150,196 @@ public final class Markdown {
                 continue;
             }
 
-            if (t.startsWith("|") && t.endsWith("|")) {
-                if (TABLE_SEP.matcher(t).matches()) continue; // riga di separazione
-                int st = out.length();
-                out.append(t);
-                int en = out.length();
-                out.setSpan(new TypefaceSpan("monospace"), st, en, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                out.setSpan(new ForegroundColorSpan(0xFFB8D9C6), st, en,
-                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                out.append('\n');
-                continue;
-            }
-
             appendInline(out, t);
             out.append('\n');
         }
 
-        // massimo una riga vuota consecutiva
         int n = out.length();
-        while (n > 1 && out.charAt(n - 1) == '\n' && out.charAt(n - 2) == '\n') {
-            out.delete(n - 1, n);
-            n--;
-        }
         while (n > 0 && out.charAt(n - 1) == '\n') {
             out.delete(n - 1, n);
             n--;
         }
         return out;
+    }
+
+    // ------------------------------------------------------------------ tabelle
+
+    private static boolean isSeparator(String t) {
+        if (t.indexOf('|') < 0) return false;
+        boolean dash = false;
+        for (int i = 0; i < t.length(); i++) {
+            char c = t.charAt(i);
+            if (c == '-') {
+                dash = true;
+            } else if (c != '|' && c != ':' && c != ' ') {
+                return false;
+            }
+        }
+        return dash;
+    }
+
+    private static String[] splitRow(String t) {
+        int from = 0, to = t.length();
+        if (t.startsWith("|")) from = 1;
+        if (to > from && t.endsWith("|")) to--;
+        String body = t.substring(from, to);
+        String[] raw = body.split("\\|", -1);
+        String[] cells = new String[raw.length];
+        for (int i = 0; i < raw.length; i++) cells[i] = plain(raw[i].trim());
+        return cells;
+    }
+
+    /** Toglie la sintassi inline da una cella (resa in monospace). */
+    private static String plain(String s) {
+        if (s.isEmpty()) return s;
+        String r = LINK.matcher(s).replaceAll("$1");
+        r = BOLD2.matcher(r).replaceAll("$1");
+        r = BOLD_.matcher(r).replaceAll("$1");
+        r = r.replace("`", "").replace("~~", "");
+        return r;
+    }
+
+    private static void appendTable(SpannableStringBuilder out, List<String[]> rows, int cols) {
+        if (rows.isEmpty()) return;
+        int n = 0;
+        for (String[] r : rows) n = Math.max(n, r.length);
+        if (n == 0) return;
+
+        int[] natural = new int[n];
+        for (String[] r : rows) {
+            for (int c = 0; c < n; c++) natural[c] = Math.max(natural[c], cell(r, c).length());
+        }
+
+        int gap = 3; // " │ "
+        int avail = Math.max(12, cols - gap * (n - 1));
+        int[] w = natural.clone();
+        int sum = 0;
+        for (int x : w) sum += x;
+
+        // stringi le colonne più larghe finché la tabella non entra nella riga
+        int[] mins = {6, 4, 2};
+        for (int mn : mins) {
+            while (sum > avail) {
+                int idx = widest(w, mn);
+                if (idx < 0) break;
+                w[idx]--;
+                sum--;
+            }
+        }
+        while (sum > avail) {
+            int idx = widest(w, 1);
+            if (idx < 0) break;
+            w[idx]--;
+            sum--;
+        }
+
+        for (int ri = 0; ri < rows.size(); ri++) {
+            String[] row = rows.get(ri);
+            List<List<String>> wrapped = new ArrayList<>();
+            int height = 1;
+            for (int c = 0; c < n; c++) {
+                List<String> cell = wrap(cell(row, c), Math.max(1, w[c]));
+                wrapped.add(cell);
+                height = Math.max(height, cell.size());
+            }
+
+            for (int l = 0; l < height; l++) {
+                int st = out.length();
+                for (int c = 0; c < n; c++) {
+                    if (c > 0) out.append(" │ ");
+                    List<String> cell = wrapped.get(c);
+                    String piece = l < cell.size() ? cell.get(l) : "";
+                    if (c < n - 1) out.append(pad(piece, w[c]));
+                    else out.append(clip(piece, w[c]));
+                }
+                int en = out.length();
+                out.setSpan(new TypefaceSpan("monospace"), st, en, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                out.setSpan(new ForegroundColorSpan(ri == 0 ? 0xFFE6FFF1 : C_TABLE), st, en,
+                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                out.setSpan(new RelativeSizeSpan(0.88f), st, en, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                if (ri == 0) {
+                    out.setSpan(new StyleSpan(Typeface.BOLD), st, en, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                }
+                out.append('\n');
+            }
+
+            if (ri == 0) {
+                int st = out.length();
+                for (int c = 0; c < n; c++) {
+                    if (c > 0) out.append("─┼─");
+                    out.append(repeat("─", Math.max(1, w[c])));
+                }
+                out.setSpan(new ForegroundColorSpan(C_DIM), st, out.length(),
+                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                out.setSpan(new TypefaceSpan("monospace"), st, out.length(),
+                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                out.append('\n');
+            }
+        }
+        out.append('\n');
+    }
+
+    private static String cell(String[] row, int idx) {
+        return idx < row.length ? row[idx] : "";
+    }
+
+    /** Indice della colonna più larga, solo se supera la soglia minima. */
+    private static int widest(int[] w, int min) {
+        int idx = -1, best = min;
+        for (int i = 0; i < w.length; i++) {
+            if (w[i] > best) {
+                best = w[i];
+                idx = i;
+            }
+        }
+        return idx;
+    }
+
+    private static String pad(String s, int width) {
+        String v = clip(s, width);
+        if (v.length() >= width) return v;
+        return v + repeat(" ", width - v.length());
+    }
+
+    private static String clip(String s, int width) {
+        if (width <= 0) return "";
+        if (s.length() <= width) return s;
+        if (width == 1) return "…";
+        return s.substring(0, width - 1) + "…";
+    }
+
+    private static List<String> wrap(String text, int width) {
+        List<String> lines = new ArrayList<>();
+        String s = text == null ? "" : text.trim();
+        if (s.isEmpty()) {
+            lines.add("");
+            return lines;
+        }
+        StringBuilder cur = new StringBuilder();
+        for (String word : s.split("\\s+")) {
+            String rest = word;
+            if (rest.length() > width) {
+                // parola più larga della colonna: tronca con ellissi
+                if (cur.length() > 0) {
+                    lines.add(cur.toString());
+                    cur.setLength(0);
+                }
+                lines.add(clip(rest, width));
+                continue;
+            }
+            if (cur.length() == 0) {
+                cur.append(rest);
+            } else if (cur.length() + 1 + rest.length() <= width) {
+                cur.append(' ').append(rest);
+            } else {
+                lines.add(cur.toString());
+                cur.setLength(0);
+                cur.append(rest);
+            }
+        }
+        if (cur.length() > 0) lines.add(cur.toString());
+        if (lines.isEmpty()) lines.add("");
+        return lines;
     }
 
     // ------------------------------------------------------------------ blocchi

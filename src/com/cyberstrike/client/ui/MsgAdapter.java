@@ -2,6 +2,7 @@ package com.cyberstrike.client.ui;
 
 import android.content.Context;
 import android.graphics.Typeface;
+import android.util.DisplayMetrics;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -38,10 +39,21 @@ public class MsgAdapter extends BaseAdapter {
     private final Context ctx;
     private final List<Row> items = new ArrayList<>();
     private final OnToolClick listener;
+    /** caratteri monospace che entrano nella bolla (per impaginare le tabelle). */
+    private final int mdCols;
 
     public MsgAdapter(Context c, OnToolClick l) {
         this.ctx = c;
         this.listener = l;
+        this.mdCols = computeCols(c);
+    }
+
+    private static int computeCols(Context c) {
+        DisplayMetrics dm = c.getResources().getDisplayMetrics();
+        float density = dm.density <= 0 ? 1f : dm.density;
+        float availDp = Math.min(dm.widthPixels / density - 24f, 340f) - 24f;
+        int cols = (int) (availDp / (14f * 0.6f));
+        return Math.max(24, Math.min(80, cols));
     }
 
     public List<Row> items() {
@@ -108,7 +120,7 @@ public class MsgAdapter extends BaseAdapter {
             case TEXT:
                 t.setBackgroundResource(R.drawable.bg_bubble_assistant);
                 t.setTextColor(0xFFD9F7E6);
-                t.setText(Markdown.render(r.text));
+                t.setText(Markdown.render(r.text, mdCols));
                 t.setMovementMethod(LinkMovementMethod.getInstance());
                 t.setOnClickListener(null);
                 break;
