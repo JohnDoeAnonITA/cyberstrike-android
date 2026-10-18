@@ -59,6 +59,9 @@ public class ModelsActivity extends Activity {
     private final Set<String> expanded = new HashSet<>();
     private final List<String[]> activeProviders = new ArrayList<>(); // {id, name}
     private JSONArray disabled = new JSONArray();
+    private String pendingProvider;
+    private String pendingModel;
+    private final java.util.Map<String, Set<String>> modelIndex = new java.util.HashMap<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -123,6 +126,7 @@ public class ModelsActivity extends Activity {
     private void build(JSONObject prov, JSONArray dis) {
         disabled = dis;
         activeProviders.clear();
+        modelIndex.clear();
 
         final List<Row> rows = new ArrayList<>();
         final String ap = Prefs.provider(this);
@@ -150,6 +154,10 @@ public class ModelsActivity extends Activity {
 
                 activeProviders.add(new String[]{id, name});
                 total++;
+                Set<String> mids = new HashSet<>();
+                Iterator<String> all = models.keys();
+                while (all.hasNext()) mids.add(all.next());
+                modelIndex.put(id, mids);
 
                 Row pr = new Row();
                 pr.kind = K_PROVIDER;
@@ -208,9 +216,35 @@ public class ModelsActivity extends Activity {
 
         sub.setText(total + " provider attivi  ·  " + dis.length() + " disattivati");
         adapter.set(rows);
+        reportPendingDelete();
     }
 
     // ---------------------------------------------------------------- azioni
+
+    /** Dopo un delete: dice se è sparito o se è definito nella config base. */
+    private void reportPendingDelete() {
+        if (pendingProvider == null) return;
+        String pid = pendingProvider, mid = pendingModel;
+        pendingProvider = null;
+        pendingModel = null;
+
+        if (mid != null) {
+            Set<String> set = modelIndex.get(pid);
+            if (set != null && set.contains(mid)) {
+                Ui.toast(this, "Modello ancora presente: è nella config base "
+                        + "(~/.config/cyberstrike). Usa Nascondi.");
+            } else {
+                Ui.toast(this, "Modello eliminato");
+            }
+        } else {
+            if (modelIndex.containsKey(pid)) {
+                Ui.toast(this, "Provider ancora presente: è nella config base "
+                        + "(~/.config/cyberstrike). Usa Disattiva.");
+            } else {
+                Ui.toast(this, "Provider eliminato");
+            }
+        }
+    }
 
     private void onRow(Row r) {
         switch (r.kind) {
@@ -336,8 +370,11 @@ public class ModelsActivity extends Activity {
                 .setTitle("Eliminare " + providerID + "?")
                 .setMessage("Verrà rimosso da /cyberstrike.json e il server dell'app "
                         + "verrà riavviato. L'istanza principale (4096) non viene toccata.")
-                .setPositiveButton("Elimina", (d, w) -> deleteOnServer(
-                        "d.get('provider',{}).pop('" + providerID + "',None)"))
+                .setPositiveButton("Elimina", (d, w) -> {
+                    pendingProvider = providerID;
+                    pendingModel = null;
+                    deleteOnServer("d.get('provider',{}).pop('" + providerID + "',None)");
+                })
                 .setNegativeButton("Annulla", null)
                 .show();
     }
@@ -347,9 +384,12 @@ public class ModelsActivity extends Activity {
                 .setTitle("Eliminare " + modelID + "?")
                 .setMessage("Verrà rimosso dal provider " + providerID
                         + " e il server dell'app verrà riavviato.")
-                .setPositiveButton("Elimina", (d, w) -> deleteOnServer(
-                        "d.get('provider',{}).get('" + providerID + "',{}).get('models',{}).pop('"
-                                + modelID + "',None)"))
+                .setPositiveButton("Elimina", (d, w) -> {
+                    pendingProvider = providerID;
+                    pendingModel = modelID;
+                    deleteOnServer("d.get('provider',{}).get('" + providerID
+                            + "',{}).get('models',{}).pop('" + modelID + "',None)");
+                })
                 .setNegativeButton("Annulla", null)
                 .show();
     }
