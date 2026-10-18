@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <!-- Tutto il traffico esterno deve essere TLS. -->
-    <base-config cleartextTrafficPermitted="false" />
+    <!-- HTTP in chiaro consentito: i server LLM locali (Ollama, LM Studio)
+         e il server CyberStrike su loopback non usano TLS. -->
+    <base-config cleartextTrafficPermitted="true" />
     <!-- Il server CyberStrike vive su localhost: chiaro consentito solo qui. -->
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="false">127.0.0.1</domain>

@@ -90,8 +90,8 @@ Menu `⋮` → **Impostazioni**:
 `⋮ → Modelli e provider`:
 
 - **scegli** il provider/modello attivo (tap sul modello)
-- **aggiungi provider**: id, nome, baseURL, API key opzionale (`PUT /auth/{id}`), primo modello
-- **aggiungi modello** a un provider esistente
+- **aggiungi provider**: id, nome, baseURL, API key opzionale (`PUT /auth/{id}`), modello scelto da `GET <baseURL>/models` oppure digitato a mano
+- **aggiungi modello** a un provider esistente (lista da `GET <baseURL>/models` o inserimento manuale)
 - **disattiva / riattiva** provider (`disabled_providers`, reversibile)
 - **predefinito per provider** (★): usato dall'auto-selezione quando il modello attivo non è impostato
 - **elimina provider/modello dal server**: modifica `/cyberstrike.json` via Termux e riavvia
@@ -101,6 +101,8 @@ Note tecniche:
 - `PATCH /config` fa un **merge profondo** e scrive in `<progetto>/cyberstrike.json`;
   non esiste un endpoint di delete, da cui il percorso via file+restart.
 - Le API key finiscono in `~/.local/share/cyberstrike/auth.json`.
+- La lista modelli è letta direttamente dal provider (`GET {baseURL}/models`, formato OpenAI:
+  `{"data":[{"id":…,"display_name":…}]}`); servono baseURL e, se richiesta, API key.
 
 ## Permessi
 

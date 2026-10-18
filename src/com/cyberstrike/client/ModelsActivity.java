@@ -10,6 +10,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.BaseAdapter;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ListView;
@@ -22,6 +23,7 @@ import android.widget.TextView;
 import com.cyberstrike.client.api.CsClient;
 import com.cyberstrike.client.util.Bootstrap;
 import com.cyberstrike.client.util.Diag;
+import com.cyberstrike.client.util.ModelList;
 import com.cyberstrike.client.util.Prefs;
 import com.cyberstrike.client.util.Ui;
 
@@ -62,6 +64,7 @@ public class ModelsActivity extends Activity {
     private String pendingProvider;
     private String pendingModel;
     private final java.util.Map<String, Set<String>> modelIndex = new java.util.HashMap<>();
+    private final java.util.Map<String, String> providerBase = new java.util.HashMap<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -127,6 +130,7 @@ public class ModelsActivity extends Activity {
         disabled = dis;
         activeProviders.clear();
         modelIndex.clear();
+        providerBase.clear();
 
         final List<Row> rows = new ArrayList<>();
         final String ap = Prefs.provider(this);
@@ -158,6 +162,7 @@ public class ModelsActivity extends Activity {
                 Iterator<String> all = models.keys();
                 while (all.hasNext()) mids.add(all.next());
                 modelIndex.put(id, mids);
+                providerBase.put(id, base);
 
                 Row pr = new Row();
                 pr.kind = K_PROVIDER;
@@ -450,6 +455,56 @@ public class ModelsActivity extends Activity {
         m.show();
     }
 
+    private interface Pick {
+        void on(String[] model);
+    }
+
+    private void fetchModels(final Button btn, final String base, final String key,
+                             final Pick cb) {
+        final String label = btn.getText().toString();
+        btn.setEnabled(false);
+        btn.setText("Carico…");
+        io.execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    final List<String[]> models = ModelList.fetch(base, key);
+                    ui.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            btn.setEnabled(true);
+                            btn.setText(label);
+                            showModelPicker(models, cb);
+                        }
+                    });
+                } catch (final Exception e) {
+                    ui.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            btn.setEnabled(true);
+                            btn.setText(label);
+                            Ui.toast(ModelsActivity.this, e.getMessage());
+                        }
+                    });
+                }
+            }
+        });
+    }
+
+    private void showModelPicker(List<String[]> models, final Pick cb) {
+        String[] labels = new String[models.size()];
+        for (int i = 0; i < models.size(); i++) {
+            String id = models.get(i)[0];
+            String name = models.get(i)[1];
+            labels[i] = name.equals(id) ? id : (name + "\n" + id);
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("Modelli disponibili (" + models.size() + ")")
+                .setItems(labels, (d, w) -> cb.on(models.get(w)))
+                .setNegativeButton("Annulla", null)
+                .show();
+    }
+
     private EditText field(String hint) {
         EditText e = new EditText(this);
         e.setHint(hint);
@@ -480,6 +535,22 @@ public class ModelsActivity extends Activity {
         box.addView(key);
         box.addView(mid);
         box.addView(mname);
+
+        final Button load = new Button(this);
+        load.setText("Carica modelli da baseURL");
+        box.addView(load);
+        load.setOnClickListener(v -> {
+            String b = url.getText().toString().trim();
+            String k = key.getText().toString().trim();
+            if (!b.startsWith("http")) {
+                Ui.toast(this, "Inserisci prima il baseURL");
+                return;
+            }
+            fetchModels(load, b, k, picked -> {
+                mid.setText(picked[0]);
+                mname.setText(picked[1]);
+            });
+        });
 
         ScrollView sc = new ScrollView(this);
         sc.addView(box);
@@ -558,12 +629,31 @@ public class ModelsActivity extends Activity {
         for (String[] p : activeProviders) names.add(p[1] + " (" + p[0] + ")");
         sp.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, names));
 
-        final EditText mid = field("id modello");
+        final EditText mid = field("id modello (manuale)");
         final EditText mname = field("nome modello");
+        final EditText key = field("API key (solo per caricare la lista)");
+        key.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
 
         box.addView(sp);
         box.addView(mid);
         box.addView(mname);
+        box.addView(key);
+
+        final Button load = new Button(this);
+        load.setText("Carica modelli dal provider");
+        box.addView(load);
+        load.setOnClickListener(v -> {
+            String pid = activeProviders.get(sp.getSelectedItemPosition())[0];
+            String base = providerBase.get(pid);
+            if (base == null || base.isEmpty()) {
+                Ui.toast(this, "Questo provider non ha un baseURL");
+                return;
+            }
+            fetchModels(load, base, key.getText().toString().trim(), picked -> {
+                mid.setText(picked[0]);
+                mname.setText(picked[1]);
+            });
+        });
 
         new AlertDialog.Builder(this)
                 .setTitle("Nuovo modello")
