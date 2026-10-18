@@ -4,13 +4,24 @@
     android:layout_height="match_parent"
     android:background="#000000">
 
-    <!-- watermark Anonymous Italia -->
+    <!-- sfondo matrix -->
+    <com.cyberstrike.client.ui.MatrixView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- scrim: rende leggibile il testo sopra la matrix -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#99000000" />
+
+    <!-- watermark Anonymous Italia, sopra la matrix -->
     <ImageView
         android:id="@+id/watermark"
         android:layout_width="320dp"
         android:layout_height="320dp"
         android:layout_gravity="center"
-        android:alpha="0.13"
+        android:alpha="0.16"
         android:scaleType="fitCenter"
         android:src="@drawable/asi_watermark"
         android:contentDescription="@null" />
