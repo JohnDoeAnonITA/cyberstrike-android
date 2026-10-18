@@ -6,9 +6,11 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
+import android.text.method.LinkMovementMethod;
 import android.widget.TextView;
 
 import com.cyberstrike.client.R;
+import com.cyberstrike.client.util.Markdown;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -89,6 +91,7 @@ public class MsgAdapter extends BaseAdapter {
         TextView t = (TextView) cv.findViewById(R.id.body);
 
         t.setText(r.text);
+        t.setMovementMethod(null);
         t.setTypeface(Typeface.DEFAULT);
         t.setTextSize(14f);
         t.setVisibility(View.VISIBLE);
@@ -105,6 +108,8 @@ public class MsgAdapter extends BaseAdapter {
             case TEXT:
                 t.setBackgroundResource(R.drawable.bg_bubble_assistant);
                 t.setTextColor(0xFFD9F7E6);
+                t.setText(Markdown.render(r.text));
+                t.setMovementMethod(LinkMovementMethod.getInstance());
                 t.setOnClickListener(null);
                 break;
 
