@@ -593,7 +593,7 @@ public class ChatActivity extends Activity {
 
     private void customAnswer(JSONObject req, int index, JSONArray answers) {
         final EditText et = new EditText(this);
-        et.setTextColor(0xFFE6EAF0);
+        et.setTextColor(0xFFD9F7E6);
         et.setHint("Risposta");
         new AlertDialog.Builder(this)
                 .setTitle("Risposta")

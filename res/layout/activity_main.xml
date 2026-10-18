@@ -4,18 +4,33 @@
     android:layout_height="match_parent"
     android:background="@color/bg">
 
+    <com.cyberstrike.client.ui.MatrixView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:background="#C4050806"
         android:orientation="vertical">
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="56dp"
+            android:layout_height="60dp"
             android:orientation="horizontal"
             android:gravity="center_vertical"
             android:paddingStart="16dp"
             android:paddingEnd="8dp">
+
+            <ImageView
+                android:id="@+id/logo"
+                android:layout_width="46dp"
+                android:layout_height="30dp"
+                android:layout_marginEnd="10dp"
+                android:adjustViewBounds="true"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_logo"
+                android:contentDescription="@string/app_name" />
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -101,7 +116,7 @@
         android:elevation="8dp"
         android:gravity="center"
         android:text="+"
-        android:textColor="#120A06"
+        android:textColor="#04130A"
         android:textSize="30sp"
         android:textStyle="bold" />
 </FrameLayout>

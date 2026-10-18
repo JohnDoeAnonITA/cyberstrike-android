@@ -97,20 +97,20 @@ public class MsgAdapter extends BaseAdapter {
         switch (r.kind) {
             case USER:
                 t.setBackgroundResource(R.drawable.bg_bubble_user);
-                t.setTextColor(0xFFF3E6DE);
+                t.setTextColor(0xFFD9F7E6);
                 setGravity(t, Gravity.END);
                 t.setOnClickListener(null);
                 break;
 
             case TEXT:
                 t.setBackgroundResource(R.drawable.bg_bubble_assistant);
-                t.setTextColor(0xFFE6EAF0);
+                t.setTextColor(0xFFD9F7E6);
                 t.setOnClickListener(null);
                 break;
 
             case TOOL:
                 t.setBackgroundResource(R.drawable.bg_tool);
-                t.setTextColor(0xFF9FB2C8);
+                t.setTextColor(0xFF7FA98F);
                 t.setTextSize(12f);
                 t.setTypeface(Typeface.MONOSPACE);
                 t.setOnClickListener(v -> {
@@ -120,7 +120,7 @@ public class MsgAdapter extends BaseAdapter {
 
             case REASONING:
                 t.setBackground(null);
-                t.setTextColor(0xFF5A6677);
+                t.setTextColor(0xFF3F5A4A);
                 t.setTextSize(12f);
                 t.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.ITALIC));
                 t.setOnClickListener(null);
@@ -128,7 +128,7 @@ public class MsgAdapter extends BaseAdapter {
 
             case ERROR:
                 t.setBackgroundResource(R.drawable.bg_tool);
-                t.setTextColor(0xFFFF4D5E);
+                t.setTextColor(0xFFFF3B4E);
                 t.setTextSize(13f);
                 t.setTypeface(Typeface.MONOSPACE);
                 t.setOnClickListener(null);
@@ -136,7 +136,7 @@ public class MsgAdapter extends BaseAdapter {
 
             default:
                 t.setBackground(null);
-                t.setTextColor(0xFF5A6677);
+                t.setTextColor(0xFF3F5A4A);
                 t.setTextSize(12f);
                 t.setOnClickListener(null);
                 break;

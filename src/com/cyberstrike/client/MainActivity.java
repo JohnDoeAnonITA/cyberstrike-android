@@ -322,7 +322,9 @@ public class MainActivity extends Activity {
         online = true;
         findViewById(R.id.fab).setAlpha(1f);
         String v = api.version();
-        setStatus(getString(R.string.online) + (v.isEmpty() ? "" : "  ·  v" + v), true);
+        setStatus(getString(R.string.online)
+                + (v.isEmpty() ? "" : "  ·  v" + v)
+                + "  ·  " + hostOf(Prefs.base(this)), true);
         refresh();
         startEvents();
         ensureModel();
@@ -350,9 +352,20 @@ public class MainActivity extends Activity {
     private void onOffline() {
         online = false;
         findViewById(R.id.fab).setAlpha(0.35f);
-        setStatus(getString(R.string.offline), false);
+        setStatus(getString(R.string.offline) + "  ·  " + hostOf(Prefs.base(this)), false);
         Ui.toast(this, "Server non raggiungibile. Tocca lo stato per riprovare, "
                 + "oppure usa ⋮ → Installa / avvia.");
+    }
+
+    /** host:porta dell'URL configurato, per l'header. */
+    private static String hostOf(String base) {
+        try {
+            android.net.Uri u = android.net.Uri.parse(base);
+            String a = u.getAuthority();
+            return a == null ? base : a;
+        } catch (Exception e) {
+            return base;
+        }
     }
 
     private void setStatus(String text, boolean online) {
@@ -606,19 +619,19 @@ public class MainActivity extends Activity {
 
         final CheckBox allowAll = new CheckBox(this);
         allowAll.setText("Permetti tutti i tool (allow-all)");
-        allowAll.setTextColor(0xFFE6EAF0);
+        allowAll.setTextColor(0xFFD9F7E6);
         allowAll.setChecked(Prefs.allowAll(this));
         root.addView(allowAll);
 
         final CheckBox wvDebug = new CheckBox(this);
         wvDebug.setText("Debug WebView terminale (chrome://inspect)");
-        wvDebug.setTextColor(0xFFE6EAF0);
+        wvDebug.setTextColor(0xFFD9F7E6);
         wvDebug.setChecked(Prefs.webviewDebug(this));
         root.addView(wvDebug);
 
         final CheckBox auto = new CheckBox(this);
         auto.setText("Avvia il server da Termux all'apertura");
-        auto.setTextColor(0xFFE6EAF0);
+        auto.setTextColor(0xFFD9F7E6);
         auto.setChecked(Prefs.autostart(this));
         root.addView(auto);
 

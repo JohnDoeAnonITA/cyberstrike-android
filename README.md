@@ -37,6 +37,13 @@ APK ~150 KB, senza Gradle, senza dipendenze AndroidX.
 | Modelli e agenti | `GET /config/providers`, `GET /agent` |
 | Terminale | `POST /pty` + WebSocket `/pty/{id}/connect` |
 
+## Grafica
+
+- Icona launcher e foreground adattivo ricavati da `https://cyberstrike.io/logo.svg` (ricolorato `#00E676`)
+- Tema hacker: nero verdastro `#050806`, accento neon `#00E676`
+- Sfondo animato "matrix" (`ui/MatrixView`, ~11 fps, si ferma quando la finestra non è visibile)
+- Header con logo + stato + host del baseURL configurato
+
 ## Requisiti
 
 1. **Termux** da [F-Droid](https://f-droid.org/packages/com.termux/) (la versione del Play Store è obsoleta).
