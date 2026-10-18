@@ -3,6 +3,7 @@ package com.cyberstrike.client;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -39,6 +40,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class MainActivity extends Activity {
+
+    private static final String TERMUX_PERM = "com.termux.permission.RUN_COMMAND";
+    private static final int REQ_TERMUX_PERM = 1001;
 
     private final ExecutorService io = Executors.newCachedThreadPool();
     private final Handler ui = new Handler(Looper.getMainLooper());
@@ -109,6 +113,21 @@ public class MainActivity extends Activity {
     }
 
     @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
+        super.onRequestPermissionsResult(requestCode, permissions, results);
+        if (requestCode != REQ_TERMUX_PERM) return;
+        Prefs.setPermAsked(this, true);
+        boolean granted = results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED;
+        Diag.add("perm", "esito " + TERMUX_PERM + " = " + granted);
+        if (granted) {
+            boot();
+        } else {
+            Ui.toast(this, "Permesso negato: avvia il server a mano da Termux");
+            onOffline();
+        }
+    }
+
+    @Override
     protected void onResume() {
         super.onResume();
         api = new CsClient(Prefs.base(this), Prefs.token(this));
@@ -128,6 +147,18 @@ public class MainActivity extends Activity {
 
     private void boot() {
         if (booting) return;
+
+        // RUN_COMMAND è un permesso "dangerous" di Termux: va concesso a runtime.
+        if (ServerStarter.installed(this)
+                && checkSelfPermission(TERMUX_PERM) != PackageManager.PERMISSION_GRANTED) {
+            if (!Prefs.permAsked(this)) {
+                Diag.add("perm", "richiesta " + TERMUX_PERM);
+                requestPermissions(new String[]{TERMUX_PERM}, REQ_TERMUX_PERM);
+                return;
+            }
+            Diag.add("perm", TERMUX_PERM + " non concesso (già chiesto)");
+        }
+
         booting = true;
         setStatus(getString(R.string.connecting), false);
 
@@ -173,10 +204,14 @@ public class MainActivity extends Activity {
                         public void run() {
                             booting = false;
                             onOffline();
-                            showSetupHint("Termux ha rifiutato il comando. "
-                                    + "Controlla allow-external-apps = true in "
-                                    + "~/.termux/termux.properties e rilancia "
-                                    + "termux-reload-settings.");
+                            String why = Bootstrap.lastError == null
+                                    ? "motivo sconosciuto" : Bootstrap.lastError;
+                            showSetupHint("Termux ha rifiutato il comando.\n\n"
+                                    + "Causa: " + why + "\n\n"
+                                    + "Verifica in Termux: allow-external-apps = true in "
+                                    + "~/.termux/termux.properties, poi termux-reload-settings.\n"
+                                    + "Verifica anche il permesso RUN_COMMAND nelle "
+                                    + "impostazioni dell'app.");
                         }
                     });
                     return;
@@ -418,6 +453,7 @@ public class MainActivity extends Activity {
         m.getMenu().add(0, 5, 4, "Apri Termux");
         m.getMenu().add(0, 6, 5, "Impostazioni");
         m.getMenu().add(0, 7, 6, "Diagnostica");
+        m.getMenu().add(0, 8, 7, "Richiedi permesso Termux");
         m.setOnMenuItemClickListener(item -> {
             switch (item.getItemId()) {
                 case 1:
@@ -440,6 +476,10 @@ public class MainActivity extends Activity {
                     return true;
                 case 7:
                     showDiagnostics();
+                    return true;
+                case 8:
+                    Prefs.setPermAsked(this, false);
+                    boot();
                     return true;
             }
             return false;

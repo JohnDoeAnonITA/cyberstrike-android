@@ -54,6 +54,15 @@ public final class Prefs {
         sp(c).edit().putBoolean("allowAll", v).apply();
     }
 
+    /** true se il permesso RUN_COMMAND è già stato chiesto all'utente. */
+    public static boolean permAsked(Context c) {
+        return sp(c).getBoolean("permAsked", false);
+    }
+
+    public static void setPermAsked(Context c, boolean v) {
+        sp(c).edit().putBoolean("permAsked", v).apply();
+    }
+
     /** Abilita chrome://inspect sulla WebView del terminale (default: off). */
     public static boolean webviewDebug(Context c) {
         return sp(c).getBoolean("webviewDebug", false);

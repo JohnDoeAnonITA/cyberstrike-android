@@ -15,6 +15,9 @@ import java.nio.charset.StandardCharsets;
  */
 public final class Bootstrap {
 
+    /** Ultimo errore di avvio (mostrato nella diagnostica). */
+    public static volatile String lastError;
+
     private Bootstrap() {
     }
 
@@ -70,11 +73,13 @@ public final class Bootstrap {
             i.putExtra("com.termux.RUN_COMMAND_BACKGROUND", true);
             i.putExtra("com.termux.RUN_COMMAND_SESSION_ACTION", "0");
             c.startService(i);
+            lastError = null;
             Diag.add("bootstrap", "RUN_COMMAND inviato");
             return true;
         } catch (Exception e) {
-            Diag.add("bootstrap", "rifiutato: " + e.getClass().getSimpleName()
-                    + " " + e.getMessage());
+            lastError = e.getClass().getSimpleName()
+                    + (e.getMessage() == null ? "" : ": " + e.getMessage());
+            Diag.add("bootstrap", "rifiutato: " + lastError);
             return false;
         }
     }
