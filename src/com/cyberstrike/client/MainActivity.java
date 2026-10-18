@@ -283,7 +283,7 @@ public class MainActivity extends Activity {
             @Override
             public void run() {
                 try {
-                    final JSONObject s = api.createSession("", "/");
+                    final JSONObject s = api.createSession("", "/", Prefs.allowAll(MainActivity.this));
                     ui.post(new Runnable() {
                         @Override
                         public void run() {
@@ -469,6 +469,13 @@ public class MainActivity extends Activity {
         }
 
         LinearLayout root = (LinearLayout) ((ViewGroup) v).getChildAt(0);
+
+        final CheckBox allowAll = new CheckBox(this);
+        allowAll.setText("Permetti tutti i tool (allow-all)");
+        allowAll.setTextColor(0xFFE6EAF0);
+        allowAll.setChecked(Prefs.allowAll(this));
+        root.addView(allowAll);
+
         final CheckBox auto = new CheckBox(this);
         auto.setText("Avvia il server da Termux all'apertura");
         auto.setTextColor(0xFFE6EAF0);
@@ -484,6 +491,7 @@ public class MainActivity extends Activity {
                     Prefs.setBase(this, u);
                     Prefs.setToken(this, token.getText().toString().trim());
                     Prefs.setAutostart(this, auto.isChecked());
+                    Prefs.setAllowAll(this, allowAll.isChecked());
                     if (!agents.isEmpty()) {
                         Prefs.setAgent(this, agents.get(agent.getSelectedItemPosition()));
                     }

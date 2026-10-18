@@ -72,6 +72,22 @@ Menu `⋮` → **Impostazioni**:
 - **Modello** — provider/modello da `/config/providers`.
 - **Avvio automatico** — bootstrap all'apertura.
 
+
+## Permessi
+
+Le sessioni create dall'app usano di default il ruleset:
+
+```json
+[{"permission": "*", "pattern": "*", "action": "allow"}]
+```
+
+equivale ad autorizzare automaticamente `bash`, browser, `read`, `write`/`edit`,
+`glob`, `grep`, `task`, `webfetch`, `skill`, ecc. — nessun prompt di conferma.
+
+Si disattiva in `⋮ → Impostazioni → Permetti tutti i tool (allow-all)`.
+Nota: il ruleset viene applicato alla **creazione** della sessione (`POST /session`);
+`PATCH /session` non permette di modificare i permessi di una sessione esistente.
+
 ## Sicurezza
 
 L'API di CyberStrike esegue comandi shell e ha, in configurazione tipica,

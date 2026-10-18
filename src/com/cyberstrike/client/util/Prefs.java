@@ -45,6 +45,15 @@ public final class Prefs {
         sp(c).edit().putString("provider", providerID).putString("model", modelID).apply();
     }
 
+    /** Permessi allow-all sulle nuove sessioni (default: attivo). */
+    public static boolean allowAll(Context c) {
+        return sp(c).getBoolean("allowAll", true);
+    }
+
+    public static void setAllowAll(Context c, boolean v) {
+        sp(c).edit().putBoolean("allowAll", v).apply();
+    }
+
     public static boolean autostart(Context c) {
         return sp(c).getBoolean("autostart", true);
     }

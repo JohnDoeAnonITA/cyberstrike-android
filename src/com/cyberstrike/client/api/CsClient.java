@@ -182,9 +182,27 @@ public class CsClient {
     }
 
     public JSONObject createSession(String title, String directory) throws ApiException {
+        return createSession(title, directory, true);
+    }
+
+    /**
+     * Crea una sessione. Con allowAll=true imposta il ruleset
+     * [{permission:"*", pattern:"*", action:"allow"}]: nessun prompt di
+     * autorizzazione per bash, browser, read, write, task, ecc.
+     */
+    public JSONObject createSession(String title, String directory, boolean allowAll)
+            throws ApiException {
         JSONObject b = new JSONObject();
         try {
             if (title != null && !title.isEmpty()) b.put("title", title);
+            if (allowAll) {
+                JSONArray rules = new JSONArray();
+                rules.put(new JSONObject()
+                        .put("permission", "*")
+                        .put("pattern", "*")
+                        .put("action", "allow"));
+                b.put("permission", rules);
+            }
         } catch (Exception ignored) {
         }
         return postObj("/session" + dir(directory), b, 20000);
