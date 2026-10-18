@@ -25,6 +25,7 @@ import com.cyberstrike.client.api.CsClient;
 import com.cyberstrike.client.util.Bootstrap;
 import com.cyberstrike.client.util.Diag;
 import com.cyberstrike.client.util.ModelList;
+import com.cyberstrike.client.ui.ModelTable;
 import com.cyberstrike.client.util.Prefs;
 import com.cyberstrike.client.util.Ui;
 
@@ -529,13 +530,13 @@ public class ModelsActivity extends Activity {
         final EditText url = field("baseURL (https://…/v1)");
         final EditText key = field("API key (opzionale)");
         key.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
-        final EditText modelsText = fieldModels();
+        final ModelTable table = new ModelTable(this);
 
         box.addView(id);
         box.addView(name);
         box.addView(url);
         box.addView(key);
-        box.addView(modelsText);
+        box.addView(table);
 
         final Button load = new Button(this);
         load.setText("Scegli modelli dalla lista (multipli)");
@@ -554,7 +555,7 @@ public class ModelsActivity extends Activity {
                 Ui.toast(this, "Inserisci prima il baseURL");
                 return;
             }
-            fetchModelsMulti(load, b, k, selected -> fillModels(modelsText, selected));
+            fetchModelsMulti(load, b, k, selected -> table.addModels(selected));
         });
 
         create.setOnClickListener(v -> {
@@ -562,7 +563,7 @@ public class ModelsActivity extends Activity {
             String pname = name.getText().toString().trim();
             String base = url.getText().toString().trim();
             String apiKey = key.getText().toString().trim();
-            List<String[]> models = parseModels(modelsText.getText().toString());
+            List<String[]> models = table.getModels();
 
             if (!pid.matches("[A-Za-z0-9._-]{1,40}")) {
                 Ui.toast(this, "id non valido (lettere, numeri, . _ -)");
@@ -573,7 +574,7 @@ public class ModelsActivity extends Activity {
                 return;
             }
             if (models.isEmpty()) {
-                Ui.toast(this, "Aggiungi almeno un modello: una riga per modello");
+                Ui.toast(this, "Aggiungi almeno un modello: compila la colonna ID");
                 return;
             }
             if (pname.isEmpty()) pname = pid;
@@ -635,12 +636,12 @@ public class ModelsActivity extends Activity {
         for (String[] p : activeProviders) names.add(p[1] + " (" + p[0] + ")");
         sp.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, names));
 
-        final EditText modelsText = fieldModels();
+        final ModelTable table = new ModelTable(this);
         final EditText key = field("API key (solo per caricare la lista)");
         key.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
 
         box.addView(sp);
-        box.addView(modelsText);
+        box.addView(table);
         box.addView(key);
 
         final Button load = new Button(this);
@@ -659,14 +660,14 @@ public class ModelsActivity extends Activity {
                 return;
             }
             fetchModelsMulti(load, base, key.getText().toString().trim(),
-                    selected -> fillModels(modelsText, selected));
+                    selected -> table.addModels(selected));
         });
 
         add.setOnClickListener(v -> {
             String pid = activeProviders.get(sp.getSelectedItemPosition())[0];
-            List<String[]> models = parseModels(modelsText.getText().toString());
+            List<String[]> models = table.getModels();
             if (models.isEmpty()) {
-                Ui.toast(this, "Scrivi almeno un modello: una riga per modello");
+                Ui.toast(this, "Compila almeno una riga: colonna ID");
                 return;
             }
             final String fpid = pid;
@@ -681,7 +682,7 @@ public class ModelsActivity extends Activity {
                             @Override
                             public void run() {
                                 expanded.add(fpid);
-                                modelsText.setText("");
+                                table.reset();
                                 Ui.toast(ModelsActivity.this, fmodels.size() == 1
                                         ? "Modello aggiunto"
                                         : fmodels.size() + " modelli aggiunti");
@@ -705,55 +706,6 @@ public class ModelsActivity extends Activity {
                 .setView(box)
                 .setPositiveButton("Chiudi", null)
                 .show();
-    }
-
-    // ------------------------------------------------------- modelli: helper
-
-    private EditText fieldModels() {
-        EditText e = field("modelli: uno per riga —  id   oppure   id = nome");
-        e.setSingleLine(false);
-        e.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
-        e.setMinLines(3);
-        e.setMaxLines(6);
-        return e;
-    }
-
-    private static void fillModels(EditText target, List<String[]> models) {
-        if (models == null || models.isEmpty()) return;
-        StringBuilder sb = new StringBuilder();
-        for (String[] m : models) {
-            sb.append(m[0]);
-            if (!m[1].equals(m[0])) sb.append(" = ").append(m[1]);
-            sb.append('\n');
-        }
-        String add = sb.toString().trim();
-        String cur = target.getText().toString().trim();
-        if (cur.isEmpty()) {
-            target.setText(add);
-        } else if (!cur.contains(add.split("\n")[0])) {
-            target.setText(cur + "\n" + add);
-        }
-    }
-
-    /** "id" oppure "id = nome" per riga; righe vuote e #commenti ignorati. */
-    private static List<String[]> parseModels(String text) {
-        List<String[]> out = new ArrayList<>();
-        if (text == null) return out;
-        for (String raw : text.split("\r?\n")) {
-            String line = raw.trim();
-            if (line.isEmpty() || line.startsWith("#")) continue;
-            String id = line, name = line;
-            int sep = line.indexOf('=');
-            if (sep < 0) sep = line.indexOf('|');
-            if (sep > 0) {
-                id = line.substring(0, sep).trim();
-                name = line.substring(sep + 1).trim();
-            }
-            if (id.isEmpty()) continue;
-            if (name.isEmpty()) name = id;
-            out.add(new String[]{id, name});
-        }
-        return out;
     }
 
     private interface MultiPick {
