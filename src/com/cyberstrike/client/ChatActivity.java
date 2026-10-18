@@ -2,16 +2,26 @@ package com.cyberstrike.client;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.ContentResolver;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.net.Uri;
+import android.provider.OpenableColumns;
+import android.util.Base64;
+import android.view.Gravity;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.PopupMenu;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 import com.cyberstrike.client.api.CsClient;
@@ -25,6 +35,8 @@ import com.cyberstrike.client.util.Ui;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -47,6 +59,16 @@ public class ChatActivity extends Activity {
     private EditText input;
     private TextView stop;
     private TextView sub;
+
+    private LinearLayout chips;
+    private View chipsBar;
+    /** allegati in attesa: {mime, filename, dataURL} */
+    private final List<String[]> pendingAttach = new ArrayList<>();
+
+    private static final int REQ_IMAGE = 4001;
+    private static final int REQ_FILE = 4002;
+    private static final int MAX_ATTACH = 12 * 1024 * 1024;
+    private static final int MAX_IMAGE = 1600;
 
     private volatile boolean running;
     private volatile boolean loadedOnce;
@@ -83,8 +105,14 @@ public class ChatActivity extends Activity {
         });
         list.setAdapter(adapter);
 
+        chips = (LinearLayout) findViewById(R.id.chips);
+        chipsBar = findViewById(R.id.chips_bar);
+
         findViewById(R.id.back).setOnClickListener(v -> finish());
         findViewById(R.id.send).setOnClickListener(v -> send());
+        findViewById(R.id.emoji).setOnClickListener(v -> showEmojiPicker());
+        findViewById(R.id.pick_image).setOnClickListener(v -> pickMedia(true));
+        findViewById(R.id.pick_file).setOnClickListener(v -> pickMedia(false));
         stop.setOnClickListener(v -> abort());
         findViewById(R.id.overflow).setOnClickListener(this::showMenu);
 
@@ -151,7 +179,14 @@ public class ChatActivity extends Activity {
                 r.kind = MsgAdapter.USER;
                 r.id = info.optString("id");
                 r.text = sb.toString();
-                rows.add(r);
+                if (!r.text.isEmpty()) rows.add(r);
+
+                for (int j = 0; parts != null && j < parts.length(); j++) {
+                    JSONObject p = parts.optJSONObject(j);
+                    if (p != null && "file".equals(p.optString("type"))) {
+                        rows.add(fileRow(p));
+                    }
+                }
                 continue;
             }
 
@@ -219,11 +254,21 @@ public class ChatActivity extends Activity {
             return r;
         }
         if ("file".equals(type)) {
-            r.kind = MsgAdapter.INFO;
-            r.text = "📎 " + p.optString("filename", p.optString("mime", "file"));
-            return r;
+            return fileRow(p);
         }
         return null;
+    }
+
+    private static MsgAdapter.Row fileRow(JSONObject p) {
+        String mime = p.optString("mime", "");
+        MsgAdapter.Row r = new MsgAdapter.Row();
+        r.id = p.optString("id");
+        r.mime = mime;
+        r.name = p.optString("filename", "file");
+        r.url = p.optString("url", "");
+        r.kind = mime.startsWith("image/") ? MsgAdapter.IMAGE : MsgAdapter.FILE;
+        r.text = r.name;
+        return r;
     }
 
     private static String firstLine(JSONObject st) {
@@ -265,18 +310,297 @@ public class ChatActivity extends Activity {
         }
     }
 
+    // ------------------------------------------------------------- allegati
+
+    private void pickMedia(boolean image) {
+        Intent i = new Intent(Intent.ACTION_GET_CONTENT);
+        i.addCategory(Intent.CATEGORY_OPENABLE);
+        i.setType(image ? "image/*" : "*/*");
+        try {
+            startActivityForResult(Intent.createChooser(i,
+                    image ? "Scegli immagine" : "Scegli file"), image ? REQ_IMAGE : REQ_FILE);
+        } catch (Exception e) {
+            Ui.toast(this, "Nessuna app disponibile per scegliere i file");
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int request, int result, Intent data) {
+        super.onActivityResult(request, result, data);
+        if ((request != REQ_IMAGE && request != REQ_FILE) || result != RESULT_OK
+                || data == null || data.getData() == null) {
+            return;
+        }
+        final Uri uri = data.getData();
+        Ui.toast(this, "Preparo l'allegato…");
+        io.execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    final String[] att = readAttachment(uri);
+                    ui.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            addChip(att);
+                        }
+                    });
+                } catch (final Exception e) {
+                    ui.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            Ui.toast(ChatActivity.this, e.getMessage());
+                        }
+                    });
+                }
+            }
+        });
+    }
+
+    /** Legge un URI scelto dall'utente e lo converte in {mime, nome, dataURL}. */
+    private String[] readAttachment(Uri uri) throws Exception {
+        ContentResolver cr = getContentResolver();
+        String mime = cr.getType(uri);
+        if (mime == null || mime.isEmpty()) mime = "application/octet-stream";
+        String name = displayName(cr, uri);
+        if (name == null || name.isEmpty()) name = "file";
+
+        if (mime.startsWith("image/")) {
+            byte[] jpeg = compressImage(cr, uri);
+            if (jpeg != null) {
+                if (jpeg.length > MAX_ATTACH) {
+                    throw new Exception("Immagine troppo grande (max 12 MB)");
+                }
+                int dot = name.lastIndexOf('.');
+                if (dot > 0) name = name.substring(0, dot);
+                name = name + ".jpg";
+                return new String[]{"image/jpeg", name, dataUrl("image/jpeg", jpeg)};
+            }
+        }
+
+        byte[] raw = readAll(cr, uri, MAX_ATTACH);
+        return new String[]{mime, name, dataUrl(mime, raw)};
+    }
+
+    private static String displayName(ContentResolver cr, Uri uri) {
+        Cursor c = null;
+        try {
+            c = cr.query(uri, null, null, null, null);
+            if (c != null && c.moveToFirst()) {
+                int i = c.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                if (i >= 0) {
+                    String v = c.getString(i);
+                    if (v != null && !v.isEmpty()) return v;
+                }
+            }
+        } catch (Exception ignored) {
+        } finally {
+            if (c != null) c.close();
+        }
+        String p = uri.getLastPathSegment();
+        return p == null ? "file" : p;
+    }
+
+    private static byte[] readAll(ContentResolver cr, Uri uri, int max) throws Exception {
+        InputStream in = cr.openInputStream(uri);
+        if (in == null) throw new Exception("Impossibile leggere il file");
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        byte[] buf = new byte[8192];
+        int n, total = 0;
+        try {
+            while ((n = in.read(buf)) >= 0) {
+                total += n;
+                if (total > max) throw new Exception("File troppo grande (max 12 MB)");
+                bos.write(buf, 0, n);
+            }
+        } finally {
+            try {
+                in.close();
+            } catch (Exception ignored) {
+            }
+        }
+        return bos.toByteArray();
+    }
+
+    /** Ridimensiona a max 1600px e comprime in JPEG (qualità 88). */
+    private static byte[] compressImage(ContentResolver cr, Uri uri) {
+        try {
+            BitmapFactory.Options bounds = new BitmapFactory.Options();
+            bounds.inJustDecodeBounds = true;
+            InputStream in = cr.openInputStream(uri);
+            if (in == null) return null;
+            BitmapFactory.decodeStream(in, null, bounds);
+            in.close();
+            if (bounds.outWidth <= 0) return null;
+
+            int sample = 1;
+            while (bounds.outWidth / (sample * 2) >= MAX_IMAGE) sample *= 2;
+
+            BitmapFactory.Options opts = new BitmapFactory.Options();
+            opts.inSampleSize = sample;
+            InputStream in2 = cr.openInputStream(uri);
+            Bitmap bmp = BitmapFactory.decodeStream(in2, null, opts);
+            if (in2 != null) in2.close();
+            if (bmp == null) return null;
+
+            int w = bmp.getWidth(), h = bmp.getHeight();
+            int max = Math.max(w, h);
+            if (max > MAX_IMAGE) {
+                float scale = (float) MAX_IMAGE / max;
+                Bitmap scaled = Bitmap.createScaledBitmap(bmp,
+                        Math.max(1, Math.round(w * scale)),
+                        Math.max(1, Math.round(h * scale)), true);
+                if (scaled != bmp) bmp.recycle();
+                bmp = scaled;
+            }
+
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            bmp.compress(Bitmap.CompressFormat.JPEG, 88, bos);
+            bmp.recycle();
+            return bos.toByteArray();
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    private static String dataUrl(String mime, byte[] bytes) {
+        return "data:" + mime + ";base64," + Base64.encodeToString(bytes, Base64.NO_WRAP);
+    }
+
+    private void addChip(final String[] att) {
+        pendingAttach.add(att);
+
+        final LinearLayout chip = new LinearLayout(this);
+        chip.setOrientation(LinearLayout.HORIZONTAL);
+        chip.setGravity(Gravity.CENTER_VERTICAL);
+        chip.setBackgroundResource(R.drawable.bg_tool);
+        int p = Ui.dp(this, 9);
+        chip.setPadding(p, Ui.dp(this, 4), p, Ui.dp(this, 4));
+
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.setMargins(0, 0, Ui.dp(this, 6), 0);
+        chip.setLayoutParams(lp);
+
+        TextView name = new TextView(this);
+        name.setText(att[1]);
+        name.setTextSize(12f);
+        name.setTextColor(0xFFD9F7E6);
+        name.setMaxWidth(Ui.dp(this, 150));
+        name.setSingleLine(true);
+        name.setEllipsize(android.text.TextUtils.TruncateAt.END);
+
+        TextView del = new TextView(this);
+        del.setText("✕");
+        del.setTextSize(13f);
+        del.setTextColor(0xFF6E8F7C);
+        del.setGravity(Gravity.CENTER);
+        del.setPadding(Ui.dp(this, 8), 0, 0, 0);
+        del.setOnClickListener(v -> {
+            pendingAttach.remove(att);
+            chips.removeView(chip);
+            updateChips();
+        });
+
+        chip.addView(name);
+        chip.addView(del);
+        chips.addView(chip);
+        updateChips();
+    }
+
+    private void updateChips() {
+        if (chipsBar != null) {
+            chipsBar.setVisibility(chips.getChildCount() == 0 ? View.GONE : View.VISIBLE);
+        }
+    }
+
+    private void clearAttachments() {
+        pendingAttach.clear();
+        if (chips != null) chips.removeAllViews();
+        updateChips();
+    }
+
+    // ---------------------------------------------------------------- emoji
+
+    private static final String[] EMOJI = {
+            "😀", "😁", "😂", "🤣", "😊", "😍", "😎", "🤩", "😅", "😉", "🙂", "😐",
+            "🤔", "😴", "😇", "🥳", "😤", "😡", "🤬", "😈", "👿", "💀", "☠️", "👻",
+            "🤖", "💩", "🙈", "🙉", "🙊", "👀", "🧠", "🫡", "👍", "👎", "👌", "✌️",
+            "🤞", "🤟", "🖖", "👊", "✊", "🤝", "🙏", "💪", "🫶", "👏", "🖐️", "✋",
+            "❤️", "🧡", "💚", "💙", "💜", "🖤", "💔", "💯", "🔥", "⚡", "✨", "💥",
+            "💫", "🎯", "🚀", "🛡️", "💻", "🖥️", "⌨️", "🖱️", "📱", "🔌", "💾", "📀",
+            "🧲", "🔧", "🔨", "⚙️", "🧰", "🔍", "🔎", "🗝️", "🔒", "🔓", "🔐", "⚔️",
+            "🗡️", "🏴‍☠️", "🏴", "🚩", "🎌", "🏁", "🧨", "💣", "☢️", "☣️", "⚠️", "✅",
+            "❌", "✔️", "✖️", "❗", "❓", "‼️", "⁉️", "🔴", "🟠", "🟡", "🟢", "🔵",
+            "🟣", "⚫", "⚪", "🌐", "🕵️", "👨‍💻", "👩‍💻", "🧑‍💻", "🥷", "🦾", "🦿", "🐍",
+            "🦅", "🐺", "🦊", "🐉", "🦈", "🕷️", "🦂", "☕", "🍕", "🍺", "🍻", "🥃",
+            "🍷", "🎮", "🎧", "🎵", "🎶", "📡", "📶", "🛰️", "🌍", "🌚", "🌙", "🤯"
+    };
+
+    private void showEmojiPicker() {
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        int pad = Ui.dp(this, 8);
+        root.setPadding(pad, pad, pad, pad);
+
+        LinearLayout row = null;
+        for (int i = 0; i < EMOJI.length; i++) {
+            if (i % 8 == 0) {
+                row = new LinearLayout(this);
+                row.setOrientation(LinearLayout.HORIZONTAL);
+                root.addView(row);
+            }
+            final String em = EMOJI[i];
+            TextView e = new TextView(this);
+            e.setText(em);
+            e.setTextSize(22f);
+            e.setGravity(Gravity.CENTER);
+            e.setLayoutParams(new LinearLayout.LayoutParams(0, Ui.dp(this, 42), 1f));
+            e.setOnClickListener(v -> insertEmoji(em));
+            if (row != null) row.addView(e);
+        }
+
+        ScrollView sc = new ScrollView(this);
+        sc.addView(root);
+        new AlertDialog.Builder(this)
+                .setTitle("Emoji")
+                .setView(sc)
+                .setNegativeButton("Chiudi", null)
+                .show();
+    }
+
+    private void insertEmoji(String em) {
+        int start = Math.max(0, input.getSelectionStart());
+        int end = Math.max(start, input.getSelectionEnd());
+        android.text.Editable ed = input.getText();
+        if (start > ed.length()) start = ed.length();
+        if (end > ed.length()) end = ed.length();
+        ed.replace(start, end, em);
+    }
+
     // ---------------------------------------------------------------- azioni
 
     private void send() {
         final String text = input.getText().toString().trim();
-        if (text.isEmpty() || running) return;
+        final List<String[]> atts = new ArrayList<>(pendingAttach);
+        if ((text.isEmpty() && atts.isEmpty()) || running) return;
 
         input.setText("");
+        clearAttachments();
+
         MsgAdapter.Row r = new MsgAdapter.Row();
         r.kind = MsgAdapter.USER;
         r.id = "tmp_" + System.currentTimeMillis();
         r.text = text;
-        adapter.add(r);
+        if (!text.isEmpty()) adapter.add(r);
+
+        for (String[] a : atts) {
+            MsgAdapter.Row ar = new MsgAdapter.Row();
+            ar.kind = a[0].startsWith("image/") ? MsgAdapter.IMAGE : MsgAdapter.FILE;
+            ar.name = a[1];
+            ar.mime = a[0];
+            ar.url = a[2];
+            adapter.add(ar);
+        }
         scrollToEnd();
 
         setRunning(true);
@@ -305,7 +629,7 @@ public class ChatActivity extends Activity {
                         }
                     }
                     api.sendMessage(sessionID, text, Prefs.agent(ChatActivity.this),
-                            provider, model, directory);
+                            provider, model, directory, atts);
                     ui.post(new Runnable() {
                         @Override
                         public void run() {

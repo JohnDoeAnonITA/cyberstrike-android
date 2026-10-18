@@ -227,18 +227,45 @@ public class CsClient {
     public JSONObject sendMessage(String id, String text, String agent,
                                   String providerID, String modelID, String directory)
             throws ApiException {
-        JSONObject part = new JSONObject();
+        return sendMessage(id, text, agent, providerID, modelID, directory, null);
+    }
+
+    /**
+     * Invia testo + allegati. attachments: lista di {mime, filename, dataURL}.
+     * Il server li salva come parti "file" del messaggio.
+     */
+    public JSONObject sendMessage(String id, String text, String agent,
+                                  String providerID, String modelID, String directory,
+                                  java.util.List<String[]> attachments)
+            throws ApiException {
         JSONObject body = new JSONObject();
         try {
-            part.put("type", "text");
-            part.put("text", text);
-            body.put("parts", new JSONArray().put(part));
+            JSONArray parts = new JSONArray();
+            if (text != null && !text.isEmpty()) {
+                parts.put(new JSONObject().put("type", "text").put("text", text));
+            }
+            if (attachments != null) {
+                for (String[] a : attachments) {
+                    if (a == null || a.length < 3) continue;
+                    parts.put(new JSONObject()
+                            .put("type", "file")
+                            .put("mime", a[0])
+                            .put("filename", a[1])
+                            .put("url", a[2]));
+                }
+            }
+            if (parts.length() == 0) {
+                throw new ApiException(0, "messaggio vuoto");
+            }
+            body.put("parts", parts);
             if (agent != null && !agent.isEmpty()) body.put("agent", agent);
             if (providerID != null && !providerID.isEmpty() && modelID != null && !modelID.isEmpty()) {
                 body.put("model", new JSONObject()
                         .put("providerID", providerID)
                         .put("modelID", modelID));
             }
+        } catch (ApiException e) {
+            throw e;
         } catch (Exception e) {
             throw new ApiException(0, "payload: " + e.getMessage());
         }

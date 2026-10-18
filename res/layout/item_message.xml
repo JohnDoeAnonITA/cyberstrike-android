@@ -19,4 +19,16 @@
         android:textSize="14sp"
         android:textIsSelectable="true"
         android:lineSpacingExtra="2dp" />
+
+    <ImageView
+        android:id="@+id/img"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:adjustViewBounds="true"
+        android:maxWidth="340dp"
+        android:maxHeight="360dp"
+        android:scaleType="fitCenter"
+        android:visibility="gone"
+        android:contentDescription="@null" />
 </LinearLayout>
