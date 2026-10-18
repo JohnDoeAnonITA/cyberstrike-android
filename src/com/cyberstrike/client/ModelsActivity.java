@@ -629,19 +629,24 @@ public class ModelsActivity extends Activity {
         for (String[] p : activeProviders) names.add(p[1] + " (" + p[0] + ")");
         sp.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, names));
 
-        final EditText mid = field("id modello (manuale)");
-        final EditText mname = field("nome modello");
+        final EditText lines = field("un modello per riga:  id   oppure   id = nome");
+        lines.setSingleLine(false);
+        lines.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+        lines.setMinLines(4);
+        lines.setMaxLines(8);
         final EditText key = field("API key (solo per caricare la lista)");
         key.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
 
         box.addView(sp);
-        box.addView(mid);
-        box.addView(mname);
+        box.addView(lines);
         box.addView(key);
 
         final Button load = new Button(this);
-        load.setText("Carica modelli dal provider");
+        load.setText("Scegli modelli dalla lista (multipli)");
         box.addView(load);
+
+        final AlertDialog[] holder = new AlertDialog[1];
+
         load.setOnClickListener(v -> {
             String pid = activeProviders.get(sp.getSelectedItemPosition())[0];
             String base = providerBase.get(pid);
@@ -649,53 +654,200 @@ public class ModelsActivity extends Activity {
                 Ui.toast(this, "Questo provider non ha un baseURL");
                 return;
             }
-            fetchModels(load, base, key.getText().toString().trim(), picked -> {
-                mid.setText(picked[0]);
-                mname.setText(picked[1]);
-            });
+            fetchModelsMulti(load, base, key.getText().toString().trim(),
+                    selected -> addModelsAndDismiss(pid, selected, holder[0]));
         });
 
-        new AlertDialog.Builder(this)
+        AlertDialog dialog = new AlertDialog.Builder(this)
                 .setTitle("Nuovo modello")
                 .setView(box)
                 .setPositiveButton("Aggiungi", (d, w) -> {
                     String pid = activeProviders.get(sp.getSelectedItemPosition())[0];
-                    String id = mid.getText().toString().trim();
-                    String name = mname.getText().toString().trim();
-                    if (id.isEmpty()) {
-                        Ui.toast(this, "id modello obbligatorio");
+                    List<String[]> models = parseModels(lines.getText().toString());
+                    if (models.isEmpty()) {
+                        Ui.toast(this, "Scrivi almeno un modello (una riga per modello)");
                         return;
                     }
-                    if (name.isEmpty()) name = id;
+                    addModelsAndDismiss(pid, models, null);
+                })
+                .setNegativeButton("Annulla", null)
+                .create();
+        holder[0] = dialog;
+        dialog.show();
+    }
 
-                    final String fpid = pid, fid = id, fname = name;
-                    io.execute(new Runnable() {
+    private interface MultiPick {
+        void on(List<String[]> selected);
+    }
+
+    private void fetchModelsMulti(final Button btn, final String base, final String key,
+                                  final MultiPick cb) {
+        final String label = btn.getText().toString();
+        btn.setEnabled(false);
+        btn.setText("Carico…");
+        io.execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    final List<String[]> models = ModelList.fetch(base, key);
+                    ui.post(new Runnable() {
                         @Override
                         public void run() {
-                            try {
-                                api.addModel(fpid, fid, fname);
-                                Diag.add("models", "modello aggiunto " + fpid + "/" + fid);
-                                ui.post(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        expanded.add(fpid);
-                                        Ui.toast(ModelsActivity.this, "Modello aggiunto");
-                                        load();
-                                    }
-                                });
-                            } catch (final Exception e) {
-                                ui.post(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        Ui.toast(ModelsActivity.this, e.getMessage());
-                                    }
-                                });
-                            }
+                            btn.setEnabled(true);
+                            btn.setText(label);
+                            showModelMultiPicker(models, cb);
                         }
                     });
+                } catch (final Exception e) {
+                    ui.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            btn.setEnabled(true);
+                            btn.setText(label);
+                            Ui.toast(ModelsActivity.this, e.getMessage());
+                        }
+                    });
+                }
+            }
+        });
+    }
+
+    /** Lista con filtro e checkbox: si possono aggiungere più modelli in un colpo. */
+    private void showModelMultiPicker(final List<String[]> models, final MultiPick cb) {
+        final List<String[]> filtered = new ArrayList<>(models);
+        final Set<String> checked = new HashSet<>();
+
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        int pad = Ui.dp(this, 12);
+        box.setPadding(pad, pad, pad, 0);
+
+        final EditText filter = field("Filtra per id o nome…");
+        box.addView(filter);
+
+        final ListView list = new ListView(this);
+        final ArrayAdapter<String> ad = new ArrayAdapter<>(this,
+                android.R.layout.simple_list_item_multiple_choice, new ArrayList<String>());
+        list.setAdapter(ad);
+        list.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE);
+        box.addView(list, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 380)));
+
+        final Runnable refresh = new Runnable() {
+            @Override
+            public void run() {
+                ad.clear();
+                for (String[] m : filtered) {
+                    ad.add(m[1].equals(m[0]) ? m[0] : (m[1] + "  ·  " + m[0]));
+                }
+                ad.notifyDataSetChanged();
+                for (int i = 0; i < filtered.size(); i++) {
+                    list.setItemChecked(i, checked.contains(filtered.get(i)[0]));
+                }
+            }
+        };
+
+        list.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int pos, long id) {
+                if (pos < 0 || pos >= filtered.size()) return;
+                String mid = filtered.get(pos)[0];
+                if (checked.contains(mid)) checked.remove(mid);
+                else checked.add(mid);
+            }
+        });
+
+        filter.addTextChangedListener(new android.text.TextWatcher() {
+            public void beforeTextChanged(CharSequence s, int a, int b, int c) {
+            }
+
+            public void onTextChanged(CharSequence s, int a, int b, int c) {
+                String q = s.toString().trim().toLowerCase();
+                filtered.clear();
+                for (String[] m : models) {
+                    if (q.isEmpty()
+                            || m[0].toLowerCase().contains(q)
+                            || m[1].toLowerCase().contains(q)) {
+                        filtered.add(m);
+                    }
+                }
+                refresh.run();
+            }
+
+            public void afterTextChanged(android.text.Editable s) {
+            }
+        });
+
+        refresh.run();
+
+        new AlertDialog.Builder(this)
+                .setTitle("Modelli disponibili (" + models.size() + ")")
+                .setView(box)
+                .setPositiveButton("Aggiungi", (d, w) -> {
+                    List<String[]> sel = new ArrayList<>();
+                    for (String[] m : models) {
+                        if (checked.contains(m[0])) sel.add(m);
+                    }
+                    cb.on(sel);
                 })
                 .setNegativeButton("Annulla", null)
                 .show();
+    }
+
+    /** "id" oppure "id = nome" per riga; righe vuote e #commenti ignorati. */
+    private static List<String[]> parseModels(String text) {
+        List<String[]> out = new ArrayList<>();
+        if (text == null) return out;
+        for (String raw : text.split("\r?\n")) {
+            String line = raw.trim();
+            if (line.isEmpty() || line.startsWith("#")) continue;
+            String id = line, name = line;
+            int sep = line.indexOf('=');
+            if (sep < 0) sep = line.indexOf('|');
+            if (sep > 0) {
+                id = line.substring(0, sep).trim();
+                name = line.substring(sep + 1).trim();
+            }
+            if (id.isEmpty()) continue;
+            if (name.isEmpty()) name = id;
+            out.add(new String[]{id, name});
+        }
+        return out;
+    }
+
+    private void addModelsAndDismiss(final String pid, final List<String[]> selected,
+                                     final AlertDialog parent) {
+        if (selected == null || selected.isEmpty()) {
+            Ui.toast(this, "Nessun modello selezionato");
+            return;
+        }
+        io.execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    api.addModels(pid, selected);
+                    Diag.add("models", selected.size() + " modelli aggiunti a " + pid);
+                    ui.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            expanded.add(pid);
+                            if (parent != null) parent.dismiss();
+                            Ui.toast(ModelsActivity.this, selected.size() == 1
+                                    ? "Modello aggiunto"
+                                    : selected.size() + " modelli aggiunti");
+                            load();
+                        }
+                    });
+                } catch (final Exception e) {
+                    ui.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            Ui.toast(ModelsActivity.this, e.getMessage());
+                        }
+                    });
+                }
+            }
+        });
     }
 
     private static void sleep(long ms) {

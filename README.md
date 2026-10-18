@@ -100,7 +100,9 @@ Menu `⋮` → **Impostazioni**:
 
 - **scegli** il provider/modello attivo (tap sul modello)
 - **aggiungi provider**: id, nome, baseURL, API key opzionale (`PUT /auth/{id}`), modello scelto da `GET <baseURL>/models` oppure digitato a mano
-- **aggiungi modello** a un provider esistente (lista da `GET <baseURL>/models` o inserimento manuale)
+- **aggiungi modelli** a un provider esistente, anche più d'uno:
+  - selezione multipla con filtro dalla lista `GET <baseURL>/models`
+  - inserimento manuale multiriga (`id` oppure `id = nome`, una riga per modello)
 - **disattiva / riattiva** provider (`disabled_providers`, reversibile)
 - **predefinito per provider** (★): usato dall'auto-selezione quando il modello attivo non è impostato
 - **elimina provider/modello dal server**: modifica `/cyberstrike.json` via Termux e riavvia

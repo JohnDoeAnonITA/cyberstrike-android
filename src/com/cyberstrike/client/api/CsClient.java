@@ -301,6 +301,23 @@ public class CsClient {
         }
     }
 
+    /** Aggiunge più modelli in un solo PATCH. */
+    public void addModels(String providerID, java.util.List<String[]> models) throws ApiException {
+        try {
+            JSONObject map = new JSONObject();
+            for (String[] m : models) {
+                map.put(m[0], new JSONObject().put("id", m[0]).put("name", m[1]));
+            }
+            JSONObject provider = new JSONObject().put("models", map);
+            patchConfig(new JSONObject()
+                    .put("provider", new JSONObject().put(providerID, provider)));
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException(0, "payload: " + e.getMessage());
+        }
+    }
+
     /** Aggiunge (o aggiorna) un modello dentro un provider esistente. */
     public void addModel(String providerID, String modelID, String name) throws ApiException {
         try {
