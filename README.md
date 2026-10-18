@@ -1,5 +1,10 @@
 # CyberStrike Android Client
 
+> **Stato: 0.1.0 — alpha, non ancora eseguita su dispositivo.**
+> Il protocollo REST/SSE/PTY è stato verificato contro il server 1.1.16 (12/12 chiamate),
+> ma l'app non è mai stata avviata su Android. Per segnalare problemi:
+> `⋮ → Diagnostica → Copia`.
+
 Client Android **nativo** (REST, non WebView) per il server [CyberStrike](https://cyberstrike.io).
 APK ~150 KB, senza Gradle, senza dipendenze AndroidX.
 

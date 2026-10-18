@@ -58,6 +58,7 @@ public final class Bootstrap {
         if (s == null || s.isEmpty()) return false;
         // il bootstrap deve avviare il server sulla stessa porta dell'app
         String full = "export CS_PORT=" + portOf(Prefs.base(c)) + "\n" + s;
+        Diag.add("bootstrap", "run (porta " + portOf(Prefs.base(c)) + ")");
         try {
             Intent i = new Intent("com.termux.RUN_COMMAND");
             i.setClassName(ServerStarter.TERMUX, "com.termux.app.RunCommandService");
@@ -69,8 +70,11 @@ public final class Bootstrap {
             i.putExtra("com.termux.RUN_COMMAND_BACKGROUND", true);
             i.putExtra("com.termux.RUN_COMMAND_SESSION_ACTION", "0");
             c.startService(i);
+            Diag.add("bootstrap", "RUN_COMMAND inviato");
             return true;
         } catch (Exception e) {
+            Diag.add("bootstrap", "rifiutato: " + e.getClass().getSimpleName()
+                    + " " + e.getMessage());
             return false;
         }
     }

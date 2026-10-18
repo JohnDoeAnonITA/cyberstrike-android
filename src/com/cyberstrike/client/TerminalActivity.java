@@ -12,6 +12,7 @@ import android.webkit.WebView;
 import android.widget.TextView;
 
 import com.cyberstrike.client.api.CsClient;
+import com.cyberstrike.client.util.Diag;
 import com.cyberstrike.client.util.Prefs;
 import com.cyberstrike.client.util.Ui;
 
@@ -43,6 +44,11 @@ public class TerminalActivity extends Activity {
         title = (TextView) findViewById(R.id.title);
         web = (WebView) findViewById(R.id.web);
 
+        if (Prefs.webviewDebug(this)) {
+            WebView.setWebContentsDebuggingEnabled(true);
+            Diag.add("term", "WebView debugging attivo");
+        }
+
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
@@ -73,6 +79,7 @@ public class TerminalActivity extends Activity {
                     final String id = p.optString("id");
                     if (id.isEmpty()) throw new Exception("nessun id PTY");
                     ptyID = id;
+                    Diag.add("term", "PTY creata " + id);
                     final String ws = api.wsPtyUrl(id);
                     ui.post(new Runnable() {
                         @Override
@@ -86,6 +93,7 @@ public class TerminalActivity extends Activity {
                         @Override
                         public void run() {
                             title.setText("Terminale");
+                            Diag.add("term", "PTY errore: " + e.getMessage());
                             Ui.toast(TerminalActivity.this, "PTY: " + e.getMessage());
                         }
                     });

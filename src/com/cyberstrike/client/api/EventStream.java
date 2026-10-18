@@ -3,6 +3,8 @@ package com.cyberstrike.client.api;
 import android.os.Handler;
 import android.os.Looper;
 
+import com.cyberstrike.client.util.Diag;
+
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -80,6 +82,7 @@ public class EventStream {
                 int code = c.getResponseCode();
                 if (code >= 400) throw new Exception("HTTP " + code);
 
+                Diag.add("sse", "connected");
                 main.post(() -> listener.onConnection(true));
 
                 BufferedReader r = new BufferedReader(
@@ -97,8 +100,8 @@ public class EventStream {
                     }
                     // righe che iniziano con ':' sono keepalive
                 }
-            } catch (Exception ignored) {
-                // rete caduta: si riprova sotto
+            } catch (Exception ex) {
+                Diag.add("sse", "disconnected: " + ex.getClass().getSimpleName());
             } finally {
                 current = null;
                 if (c != null) c.disconnect();

@@ -54,6 +54,15 @@ public final class Prefs {
         sp(c).edit().putBoolean("allowAll", v).apply();
     }
 
+    /** Abilita chrome://inspect sulla WebView del terminale (default: off). */
+    public static boolean webviewDebug(Context c) {
+        return sp(c).getBoolean("webviewDebug", false);
+    }
+
+    public static void setWebviewDebug(Context c, boolean v) {
+        sp(c).edit().putBoolean("webviewDebug", v).apply();
+    }
+
     public static boolean autostart(Context c) {
         return sp(c).getBoolean("autostart", true);
     }

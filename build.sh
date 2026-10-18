@@ -12,7 +12,7 @@ BT="${2:-${BUILD_TOOLS:-}}"
 : "${BT:?serve la cartella build-tools (arg2 o BUILD_TOOLS)}"
 
 VERSION_CODE="${VERSION_CODE:-1}"
-VERSION_NAME="${VERSION_NAME:-1.0.0}"
+VERSION_NAME="${VERSION_NAME:-0.1.0}"
 
 # Preferisce il binario dei build-tools, ma solo se è eseguibile su questa
 # architettura (i build-tools ufficiali sono x86_64: su arm64 si usano quelli

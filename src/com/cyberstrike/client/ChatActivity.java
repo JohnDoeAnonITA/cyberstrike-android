@@ -17,6 +17,7 @@ import android.widget.TextView;
 import com.cyberstrike.client.api.CsClient;
 import com.cyberstrike.client.api.EventStream;
 import com.cyberstrike.client.ui.MsgAdapter;
+import com.cyberstrike.client.util.Diag;
 import com.cyberstrike.client.util.Prefs;
 import com.cyberstrike.client.util.Ui;
 
@@ -49,6 +50,7 @@ public class ChatActivity extends Activity {
 
     private volatile boolean running;
     private volatile boolean loadedOnce;
+    private boolean uiPending;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -271,6 +273,7 @@ public class ChatActivity extends Activity {
 
         setRunning(true);
         hideKeyboard();
+        Diag.add("chat", "send " + text.length() + " char");
 
         final String agent = Prefs.agent(this);
         final String provider = Prefs.provider(this);
@@ -285,6 +288,7 @@ public class ChatActivity extends Activity {
                         @Override
                         public void run() {
                             setRunning(false);
+                            Diag.add("chat", "risposta completata");
                             load();
                         }
                     });
@@ -293,6 +297,7 @@ public class ChatActivity extends Activity {
                         @Override
                         public void run() {
                             setRunning(false);
+                            Diag.add("chat", "errore: " + e.getMessage());
                             MsgAdapter.Row err = new MsgAdapter.Row();
                             err.kind = MsgAdapter.ERROR;
                             err.text = "✖ " + e.getMessage();
@@ -327,6 +332,29 @@ public class ChatActivity extends Activity {
             InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
             if (imm != null) imm.hideSoftInputFromWindow(input.getWindowToken(), 0);
         } catch (Exception ignored) {
+        }
+    }
+
+    /** Aggiorna la lista al massimo ~15 volte/secondo durante lo streaming. */
+    private void scheduleUi() {
+        if (uiPending) return;
+        uiPending = true;
+        ui.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                uiPending = false;
+                adapter.notifyDataSetChanged();
+                scrollToEndIfNear();
+            }
+        }, 60);
+    }
+
+    private void scrollToEndIfNear() {
+        int count = adapter.getCount();
+        if (count == 0) return;
+        // segui lo stream solo se l'utente è in fondo
+        if (list.getLastVisiblePosition() >= count - 4) {
+            list.setSelection(count - 1);
         }
     }
 
@@ -378,11 +406,33 @@ public class ChatActivity extends Activity {
                 existing.text = r.text;
                 existing.detail = r.detail;
                 existing.kind = r.kind;
-                adapter.notifyDataSetChanged();
+                scheduleUi();
             } else {
                 adapter.add(r);
             }
             if (!"tool".equals(part.optString("type"))) scrollToEnd();
+
+        } else if ("message.part.delta".equals(type)) {
+            // Il server trasmette il testo incrementale solo con questo evento:
+            // l'updated completo arriva alla fine.
+            String partID = props.optString("partID", "");
+            String field = props.optString("field", "");
+            String delta = props.optString("delta", "");
+            if (partID.isEmpty() || delta.isEmpty()) return;
+            if (!"text".equals(field)) return;
+
+            MsgAdapter.Row row = adapter.find(partID);
+            if (row == null) {
+                row = new MsgAdapter.Row();
+                row.id = partID;
+                row.kind = MsgAdapter.TEXT;
+                row.text = delta;
+                adapter.add(row);
+            } else {
+                row.text = row.text + delta;
+                scheduleUi();
+            }
+            scrollToEndIfNear();
 
         } else if ("session.idle".equals(type)) {
             setRunning(false);

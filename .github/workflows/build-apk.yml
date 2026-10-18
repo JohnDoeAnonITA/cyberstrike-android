@@ -63,3 +63,4 @@ jobs:
         with:
           files: cyberstrike-client.apk
           generate_release_notes: true
+          prerelease: true

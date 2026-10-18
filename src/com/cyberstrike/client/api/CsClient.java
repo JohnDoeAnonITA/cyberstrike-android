@@ -2,6 +2,8 @@ package com.cyberstrike.client.api;
 
 import android.net.Uri;
 
+import com.cyberstrike.client.util.Diag;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -91,11 +93,16 @@ public class CsClient {
             c = open(method, path, body, readTimeout);
             int code = c.getResponseCode();
             String text = readAll(code >= 400 ? c.getErrorStream() : c.getInputStream());
-            if (code >= 400) throw new ApiException(code, text);
+            if (code >= 400) {
+                Diag.add("http", method + " " + path + " -> " + code);
+                throw new ApiException(code, text);
+            }
             return text;
         } catch (ApiException e) {
             throw e;
         } catch (Exception e) {
+            Diag.add("http", method + " " + path + " -> " + e.getClass().getSimpleName()
+                    + ": " + e.getMessage());
             throw new ApiException(0, e.getClass().getSimpleName() + ": " + e.getMessage());
         } finally {
             if (c != null) c.disconnect();

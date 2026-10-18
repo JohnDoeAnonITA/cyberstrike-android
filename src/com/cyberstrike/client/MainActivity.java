@@ -22,6 +22,7 @@ import android.widget.TextView;
 import com.cyberstrike.client.api.CsClient;
 import com.cyberstrike.client.api.EventStream;
 import com.cyberstrike.client.util.Bootstrap;
+import com.cyberstrike.client.util.Diag;
 import com.cyberstrike.client.util.Prefs;
 import com.cyberstrike.client.util.ServerStarter;
 import com.cyberstrike.client.util.Ui;
@@ -134,9 +135,11 @@ public class MainActivity extends Activity {
             @Override
             public void run() {
                 if (api.healthy()) {
+                    Diag.add("boot", "health OK su " + Prefs.base(MainActivity.this));
                     done(true);
                     return;
                 }
+                Diag.add("boot", "health KO su " + Prefs.base(MainActivity.this));
 
                 if (!ServerStarter.installed(MainActivity.this)) {
                     ui.post(new Runnable() {
@@ -243,6 +246,25 @@ public class MainActivity extends Activity {
                 .show();
     }
 
+    private void showDiagnostics() {
+        new AlertDialog.Builder(this)
+                .setTitle("Diagnostica")
+                .setMessage(Diag.dump())
+                .setPositiveButton("Copia", (d, w) -> {
+                    android.content.ClipboardManager cm =
+                            (android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+                    if (cm != null) cm.setPrimaryClip(
+                            android.content.ClipData.newPlainText("CyberStrike", Diag.dump()));
+                    Ui.toast(this, "Log copiato");
+                })
+                .setNeutralButton("Pulisci", (d, w) -> {
+                    Diag.clear();
+                    Ui.toast(this, "Log pulito");
+                })
+                .setNegativeButton("Chiudi", null)
+                .show();
+    }
+
     private void showSetupHint(String msg) {
         new AlertDialog.Builder(this)
                 .setTitle("Setup CyberStrike")
@@ -274,6 +296,7 @@ public class MainActivity extends Activity {
     }
 
     private void setStatus(String text, boolean online) {
+        Diag.add("boot", text);
         status.setText(text);
         dot.setBackgroundResource(online ? R.drawable.dot_online : R.drawable.dot_offline);
     }
@@ -394,6 +417,7 @@ public class MainActivity extends Activity {
         m.getMenu().add(0, 4, 3, "Installa / avvia server");
         m.getMenu().add(0, 5, 4, "Apri Termux");
         m.getMenu().add(0, 6, 5, "Impostazioni");
+        m.getMenu().add(0, 7, 6, "Diagnostica");
         m.setOnMenuItemClickListener(item -> {
             switch (item.getItemId()) {
                 case 1:
@@ -413,6 +437,9 @@ public class MainActivity extends Activity {
                     return true;
                 case 6:
                     showSettings();
+                    return true;
+                case 7:
+                    showDiagnostics();
                     return true;
             }
             return false;
@@ -510,6 +537,12 @@ public class MainActivity extends Activity {
         allowAll.setChecked(Prefs.allowAll(this));
         root.addView(allowAll);
 
+        final CheckBox wvDebug = new CheckBox(this);
+        wvDebug.setText("Debug WebView terminale (chrome://inspect)");
+        wvDebug.setTextColor(0xFFE6EAF0);
+        wvDebug.setChecked(Prefs.webviewDebug(this));
+        root.addView(wvDebug);
+
         final CheckBox auto = new CheckBox(this);
         auto.setText("Avvia il server da Termux all'apertura");
         auto.setTextColor(0xFFE6EAF0);
@@ -526,6 +559,7 @@ public class MainActivity extends Activity {
                     Prefs.setToken(this, token.getText().toString().trim());
                     Prefs.setAutostart(this, auto.isChecked());
                     Prefs.setAllowAll(this, allowAll.isChecked());
+                    Prefs.setWebviewDebug(this, wvDebug.isChecked());
                     if (!agents.isEmpty()) {
                         Prefs.setAgent(this, agents.get(agent.getSelectedItemPosition()));
                     }
