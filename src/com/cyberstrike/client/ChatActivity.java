@@ -7,6 +7,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Bitmap;
+import android.graphics.Typeface;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.provider.OpenableColumns;
@@ -17,6 +18,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ListView;
@@ -247,7 +249,7 @@ public class ChatActivity extends Activity {
             String icon = "running".equals(status) ? "⏳"
                     : "completed".equals(status) ? "✔"
                     : "error".equals(status) ? "✖" : "•";
-            String first = firstLine(st);
+            String first = "question".equals(tool) ? questionSummary(st) : firstLine(st);
             r.text = icon + " " + tool + "  ·  " + status
                     + (first.isEmpty() ? "" : "\n$ " + Ui.ellipsize(first, 160));
             r.detail = toolDetail(p);
@@ -269,6 +271,21 @@ public class ChatActivity extends Activity {
         r.kind = mime.startsWith("image/") ? MsgAdapter.IMAGE : MsgAdapter.FILE;
         r.text = r.name;
         return r;
+    }
+
+    /** Riepilogo leggibile del tool question, al posto del JSON grezzo. */
+    private static String questionSummary(JSONObject st) {
+        if (st == null) return "";
+        JSONObject in = st.optJSONObject("input");
+        if (in == null) return "";
+        JSONArray qs = in.optJSONArray("questions");
+        if (qs == null || qs.length() == 0) return "";
+        JSONObject q = qs.optJSONObject(0);
+        if (q == null) return "";
+        String h = q.optString("header", "");
+        String qq = q.optString("question", "");
+        if (h.isEmpty()) return qq;
+        return qq.isEmpty() ? h : h + " — " + qq;
     }
 
     private static String firstLine(JSONObject st) {
@@ -797,7 +814,9 @@ public class ChatActivity extends Activity {
             askPermission(props);
 
         } else if ("question.asked".equals(type)) {
-            askQuestion(props, 0, new JSONArray());
+            if (askedQuestions.add(props.optString("id"))) {
+                askQuestion(props, 0, new JSONArray());
+            }
         }
     }
 
@@ -841,87 +860,186 @@ public class ChatActivity extends Activity {
         });
     }
 
+    /** Domande già mostrate: il server può ripetere l'evento, la finestra no. */
+    private final java.util.Set<String> askedQuestions = new java.util.HashSet<>();
+
     private void askQuestion(final JSONObject req, final int index, final JSONArray answers) {
         JSONArray qs = req.optJSONArray("questions");
         if (qs == null || index >= qs.length()) {
-            io.execute(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        api.replyQuestion(req.optString("id"), answers, directory);
-                    } catch (final Exception e) {
-                        ui.post(new Runnable() {
-                            @Override
-                            public void run() {
-                                Ui.toast(ChatActivity.this, e.getMessage());
-                            }
-                        });
-                    }
-                }
-            });
+            sendAnswers(req, answers);
             return;
         }
 
         JSONObject q = qs.optJSONObject(index);
-        String header = q.optString("header", "Domanda");
+        if (q == null) {
+            askQuestion(req, index + 1, answers);
+            return;
+        }
+
+        final String header = q.optString("header", "Domanda");
         String question = q.optString("question", "");
         JSONArray opts = q.optJSONArray("options");
         final boolean multi = q.optBoolean("multiple", false);
         final boolean custom = q.optBoolean("custom", true);
 
         final List<String> labels = new ArrayList<>();
+        final List<String> descs = new ArrayList<>();
         if (opts != null) {
             for (int i = 0; i < opts.length(); i++) {
                 JSONObject o = opts.optJSONObject(i);
-                if (o != null) labels.add(o.optString("label"));
+                if (o == null) continue;
+                labels.add(o.optString("label", ""));
+                descs.add(o.optString("description", ""));
             }
         }
 
-        if (multi) {
-            final boolean[] checked = new boolean[labels.size()];
-            new AlertDialog.Builder(this)
-                    .setTitle(header)
-                    .setMessage(question)
-                    .setMultiChoiceItems(labels.toArray(new String[0]), checked,
-                            (d, which, isChecked) -> checked[which] = isChecked)
-                    .setPositiveButton("OK", (d, w) -> {
-                        JSONArray one = new JSONArray();
-                        for (int i = 0; i < checked.length; i++) {
-                            if (checked[i]) one.put(labels.get(i));
-                        }
-                        answers.put(one);
-                        askQuestion(req, index + 1, answers);
-                    })
-                    .setNegativeButton("Reject", (d, w) -> rejectQuestion(req))
-                    .show();
-            return;
+        ScrollView sv = new ScrollView(this);
+        final LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(18), dp(4), dp(18), dp(4));
+
+        if (!question.isEmpty()) {
+            TextView qt = new TextView(this);
+            qt.setText(question);
+            qt.setTextColor(0xFFD9F7E6);
+            qt.setTextSize(14f);
+            qt.setLineSpacing(dp(2), 1f);
+            qt.setPadding(0, 0, 0, dp(12));
+            box.addView(qt);
         }
 
-        final String[] items = labels.toArray(new String[0]);
-        new AlertDialog.Builder(this)
+        final AlertDialog[] holder = new AlertDialog[1];
+        final boolean[] checked = new boolean[labels.size()];
+
+        for (int i = 0; i < labels.size(); i++) {
+            final int idx = i;
+            LinearLayout row = optionRow(labels.get(i), descs.get(i), multi, i + 1);
+            if (multi) {
+                final CheckBox cb = (CheckBox) row.getTag();
+                cb.setOnCheckedChangeListener((v, isChecked) -> checked[idx] = isChecked);
+                row.setOnClickListener(v -> cb.setChecked(!cb.isChecked()));
+            } else {
+                row.setOnClickListener(v -> {
+                    JSONArray one = new JSONArray();
+                    one.put(labels.get(idx));
+                    answers.put(one);
+                    if (holder[0] != null) holder[0].dismiss();
+                    askQuestion(req, index + 1, answers);
+                });
+            }
+            box.addView(row);
+        }
+
+        if (custom) {
+            LinearLayout row = optionRow("Altra risposta…", "scrivi tu", false, 0);
+            row.setOnClickListener(v -> {
+                if (holder[0] != null) holder[0].dismiss();
+                customAnswer(req, index, answers, header);
+            });
+            box.addView(row);
+        }
+
+        sv.addView(box);
+
+        AlertDialog.Builder b = new AlertDialog.Builder(this)
                 .setTitle(header)
-                .setMessage(question)
-                .setItems(items, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface d, int which) {
-                        JSONArray one = new JSONArray();
-                        one.put(labels.get(which));
-                        answers.put(one);
-                        askQuestion(req, index + 1, answers);
-                    }
-                })
-                .setPositiveButton(custom ? "Altro…" : null, (d, w) -> customAnswer(req, index, answers))
-                .setNegativeButton("Reject", (d, w) -> rejectQuestion(req))
-                .show();
+                .setView(sv)
+                .setNegativeButton("Rifiuta", (d, w) -> rejectQuestion(req));
+
+        if (multi) {
+            b.setPositiveButton("Invia", (d, w) -> {
+                JSONArray one = new JSONArray();
+                for (int i = 0; i < checked.length; i++) {
+                    if (checked[i]) one.put(labels.get(i));
+                }
+                answers.put(one);
+                askQuestion(req, index + 1, answers);
+            });
+        }
+
+        holder[0] = b.create();
+        holder[0].show();
     }
 
-    private void customAnswer(JSONObject req, int index, JSONArray answers) {
+    /** Riga selezionabile della finestra domanda: numero (o casella) + testo + nota. */
+    private LinearLayout optionRow(String label, String desc, boolean checkable, int num) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.VERTICAL);
+        row.setBackgroundResource(R.drawable.bg_card);
+        row.setPadding(dp(12), dp(9), dp(12), dp(9));
+
+        LinearLayout head = new LinearLayout(this);
+        head.setOrientation(LinearLayout.HORIZONTAL);
+        head.setGravity(Gravity.CENTER_VERTICAL);
+
+        if (checkable) {
+            CheckBox cb = new CheckBox(this);
+            cb.setPadding(0, 0, 0, 0);
+            head.addView(cb);
+            row.setTag(cb);
+        } else {
+            TextView n = new TextView(this);
+            n.setText(num > 0 ? String.valueOf(num) : "✎");
+            n.setTextColor(0xFF00E676);
+            n.setTypeface(Typeface.DEFAULT_BOLD);
+            n.setTextSize(num > 0 ? 13f : 15f);
+            n.setMinWidth(dp(24));
+            head.addView(n);
+        }
+
+        TextView l = new TextView(this);
+        l.setText(label);
+        l.setTextColor(0xFFD9F7E6);
+        l.setTextSize(14f);
+        l.setLayoutParams(new LinearLayout.LayoutParams(0,
+                LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        head.addView(l);
+        row.addView(head);
+
+        if (desc != null && !desc.isEmpty()) {
+            TextView d = new TextView(this);
+            d.setText(desc);
+            d.setTextColor(0xFF7FA98F);
+            d.setTextSize(12f);
+            d.setPadding(dp(24), dp(3), 0, 0);
+            row.addView(d);
+        }
+
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.bottomMargin = dp(8);
+        row.setLayoutParams(lp);
+        return row;
+    }
+
+    private void sendAnswers(final JSONObject req, final JSONArray answers) {
+        io.execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    api.replyQuestion(req.optString("id"), answers, directory);
+                } catch (final Exception e) {
+                    ui.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            Ui.toast(ChatActivity.this, e.getMessage());
+                        }
+                    });
+                }
+            }
+        });
+    }
+
+    private void customAnswer(JSONObject req, int index, JSONArray answers, String header) {
         final EditText et = new EditText(this);
         et.setTextColor(0xFFD9F7E6);
-        et.setHint("Risposta");
+        et.setHint("Scrivi la risposta…");
+        LinearLayout wrap = new LinearLayout(this);
+        wrap.setPadding(dp(18), dp(4), dp(18), dp(4));
+        wrap.addView(et);
         new AlertDialog.Builder(this)
-                .setTitle("Risposta")
-                .setView(et)
+                .setTitle(header)
+                .setView(wrap)
                 .setPositiveButton("OK", (d, w) -> {
                     JSONArray one = new JSONArray();
                     one.put(et.getText().toString());
@@ -930,6 +1048,10 @@ public class ChatActivity extends Activity {
                 })
                 .setNegativeButton("Annulla", null)
                 .show();
+    }
+
+    private int dp(int v) {
+        return (int) (v * getResources().getDisplayMetrics().density);
     }
 
     private void rejectQuestion(final JSONObject req) {

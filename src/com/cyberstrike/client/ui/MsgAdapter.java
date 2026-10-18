@@ -12,6 +12,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.text.method.LinkMovementMethod;
 import android.widget.TextView;
 
@@ -115,15 +116,15 @@ public class MsgAdapter extends BaseAdapter {
             cv = View.inflate(ctx, R.layout.item_message, null);
         }
         final Row r = items.get(pos);
-        TextView t = (TextView) cv.findViewById(R.id.body);
+        LinearLayout stack = (LinearLayout) cv.findViewById(R.id.stack);
         ImageView img = (ImageView) cv.findViewById(R.id.img);
 
-        t.setText(r.text);
-        t.setMovementMethod(null);
-        t.setTypeface(Typeface.DEFAULT);
-        t.setTextSize(14f);
-        t.setVisibility(View.VISIBLE);
-        setGravity(t, Gravity.START);
+        stack.removeAllViews();
+        stack.setOnClickListener(null);
+        stack.setBackground(null);
+        stack.setPadding(0, 0, 0, 0);
+        stack.setGravity(Gravity.START);
+
         if (img != null) {
             img.setTag(null);
             img.setVisibility(View.GONE);
@@ -132,52 +133,45 @@ public class MsgAdapter extends BaseAdapter {
 
         switch (r.kind) {
             case USER:
-                t.setBackgroundResource(R.drawable.bg_bubble_user);
-                t.setTextColor(0xFFD9F7E6);
-                setGravity(t, Gravity.END);
-                t.setOnClickListener(null);
+                bubble(stack, R.drawable.bg_bubble_user, Gravity.END, 12, 9);
+                stack.addView(text(r.text, 0xFFD9F7E6, 14f, Typeface.DEFAULT));
                 break;
 
             case TEXT:
-                t.setBackgroundResource(R.drawable.bg_bubble_assistant);
-                t.setTextColor(0xFFD9F7E6);
-                t.setText(Markdown.render(r.text, mdCols));
-                t.setMovementMethod(LinkMovementMethod.getInstance());
-                t.setOnClickListener(null);
+                bubble(stack, R.drawable.bg_bubble_assistant, Gravity.START, 12, 9);
+                for (Markdown.Block b : Markdown.blocks(r.text, mdCols)) {
+                    if (b.isTable()) {
+                        stack.addView(TableView.build(ctx, b.table, b.headered), tableLp());
+                    } else {
+                        TextView t = text(b.text, 0xFFD9F7E6, 14f, Typeface.DEFAULT);
+                        t.setMovementMethod(LinkMovementMethod.getInstance());
+                        stack.addView(t);
+                    }
+                }
                 break;
 
             case TOOL:
-                t.setBackgroundResource(R.drawable.bg_tool);
-                t.setTextColor(0xFF7FA98F);
-                t.setTextSize(12f);
-                t.setTypeface(Typeface.MONOSPACE);
-                t.setOnClickListener(v -> {
+                bubble(stack, R.drawable.bg_tool, Gravity.START, 10, 8);
+                stack.addView(text(r.text, 0xFF7FA98F, 12f, Typeface.MONOSPACE));
+                stack.setOnClickListener(v -> {
                     if (listener != null) listener.onTool(r);
                 });
                 break;
 
             case REASONING:
-                t.setBackground(null);
-                t.setTextColor(0xFF3F5A4A);
-                t.setTextSize(12f);
-                t.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.ITALIC));
-                t.setOnClickListener(null);
+                stack.addView(text(r.text, 0xFF3F5A4A, 12f,
+                        Typeface.create(Typeface.DEFAULT, Typeface.ITALIC)));
                 break;
 
             case ERROR:
-                t.setBackgroundResource(R.drawable.bg_tool);
-                t.setTextColor(0xFFFF3B4E);
-                t.setTextSize(13f);
-                t.setTypeface(Typeface.MONOSPACE);
-                t.setOnClickListener(null);
+                bubble(stack, R.drawable.bg_tool, Gravity.START, 10, 8);
+                stack.addView(text(r.text, 0xFFFF3B4E, 13f, Typeface.MONOSPACE));
                 break;
 
             case IMAGE:
-                t.setText(r.name.isEmpty() ? "immagine" : r.name);
-                t.setTextSize(11f);
-                t.setTextColor(0xFF6E8F7C);
-                t.setBackgroundResource(R.drawable.bg_bubble_assistant);
-                t.setOnClickListener(null);
+                bubble(stack, R.drawable.bg_bubble_assistant, Gravity.START, 12, 9);
+                stack.addView(text(r.name.isEmpty() ? "immagine" : r.name,
+                        0xFF6E8F7C, 11f, Typeface.DEFAULT));
                 if (img != null && r.url != null && !r.url.isEmpty()) {
                     img.setVisibility(View.VISIBLE);
                     bindImage(img, r.url);
@@ -185,23 +179,62 @@ public class MsgAdapter extends BaseAdapter {
                 break;
 
             case FILE:
-                t.setBackgroundResource(R.drawable.bg_tool);
-                t.setTextColor(0xFF7FA98F);
-                t.setTextSize(12f);
-                t.setTypeface(Typeface.MONOSPACE);
-                t.setText("📎 " + (r.name.isEmpty() ? "file" : r.name)
-                        + (r.mime.isEmpty() ? "" : "\n" + r.mime));
-                t.setOnClickListener(null);
+                bubble(stack, R.drawable.bg_tool, Gravity.START, 10, 8);
+                stack.addView(text("\uD83D\uDCCE " + (r.name.isEmpty() ? "file" : r.name)
+                                + (r.mime.isEmpty() ? "" : "\n" + r.mime),
+                        0xFF7FA98F, 12f, Typeface.MONOSPACE));
                 break;
 
             default:
-                t.setBackground(null);
-                t.setTextColor(0xFF3F5A4A);
-                t.setTextSize(12f);
-                t.setOnClickListener(null);
+                stack.addView(text(r.text, 0xFF3F5A4A, 12f, Typeface.DEFAULT));
                 break;
         }
         return cv;
+    }
+
+    // ------------------------------------------------------------- viste bolla
+
+    private TextView text(CharSequence s, int color, float size, Typeface tf) {
+        TextView t = new TextView(ctx);
+        t.setText(s);
+        t.setTextColor(color);
+        t.setTextSize(size);
+        t.setTypeface(tf);
+        t.setLineSpacing(dp(2f), 1f);
+        t.setTextIsSelectable(true);
+        t.setMaxWidth(bubblePx());
+        return t;
+    }
+
+    private void bubble(LinearLayout stack, int bg, int gravity, int padH, int padV) {
+        stack.setBackgroundResource(bg);
+        stack.setPadding((int) dp(padH), (int) dp(padV), (int) dp(padH), (int) dp(padV));
+        LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) stack.getLayoutParams();
+        lp.gravity = gravity;
+        lp.width = LinearLayout.LayoutParams.WRAP_CONTENT;
+        stack.setLayoutParams(lp);
+        stack.setGravity(Gravity.START);
+    }
+
+    /** Larghezza massima della bolla in pixel. */
+    private int bubblePx() {
+        DisplayMetrics dm = ctx.getResources().getDisplayMetrics();
+        float availDp = Math.min(dm.widthPixels / dm.density - 24f, 340f);
+        return (int) (Math.max(180f, availDp) * dm.density);
+    }
+
+    /** Le tabelle occupano la bolla e scorrono in orizzontale se troppo larghe. */
+    private LinearLayout.LayoutParams tableLp() {
+        int w = Math.max((int) dp(160), bubblePx() - (int) dp(24));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                w, LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.topMargin = (int) dp(6);
+        lp.bottomMargin = (int) dp(4);
+        return lp;
+    }
+
+    private float dp(float v) {
+        return v * ctx.getResources().getDisplayMetrics().density;
     }
 
     // --------------------------------------------------------------- immagini
@@ -260,12 +293,4 @@ public class MsgAdapter extends BaseAdapter {
         }
     }
 
-    private static void setGravity(TextView t, int g) {
-        ViewGroup.LayoutParams lp = t.getLayoutParams();
-        if (lp instanceof android.widget.LinearLayout.LayoutParams) {
-            ((android.widget.LinearLayout.LayoutParams) lp).gravity = g;
-            t.setLayoutParams(lp);
-        }
-        t.setGravity(g | Gravity.CENTER_VERTICAL);
-    }
 }

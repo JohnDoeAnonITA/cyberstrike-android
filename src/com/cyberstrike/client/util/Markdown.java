@@ -60,6 +60,93 @@ public final class Markdown {
         return render(md, 40);
     }
 
+    /** Blocco di contenuto: testo formattato oppure tabella (resa come vista nativa). */
+    public static final class Block {
+        public final CharSequence text;
+        public final String[][] table;
+        /** true se la tabella ha una vera riga di intestazione. */
+        public final boolean headered;
+
+        Block(CharSequence t, String[][] tb, boolean head) {
+            text = t;
+            table = tb;
+            headered = head;
+        }
+
+        public boolean isTable() {
+            return table != null;
+        }
+    }
+
+    /**
+     * Spezza il markdown in blocchi isolando le tabelle, così l'app può disegnarle
+     * come viste native invece che con caratteri ASCII (pipe e trattini).
+     */
+    public static List<Block> blocks(String md, int cols) {
+        List<Block> out = new ArrayList<>();
+        if (md == null || md.isEmpty()) return out;
+        int width = Math.max(20, cols);
+        String src = md.replace("\r\n", "\n").replace('\r', '\n');
+        String[] lines = src.split("\n", -1);
+        StringBuilder text = new StringBuilder();
+        boolean fence = false;
+
+        for (int i = 0; i < lines.length; i++) {
+            String t = lines[i].trim();
+            if (t.startsWith("```")) {
+                fence = !fence;
+                text.append(lines[i]).append('\n');
+                continue;
+            }
+            if (!fence && t.indexOf('|') >= 0 && i + 1 < lines.length
+                    && isSeparator(lines[i + 1].trim())) {
+                int j = i;
+                List<String[]> rows = new ArrayList<>();
+                while (j < lines.length) {
+                    String tl = lines[j].trim();
+                    if (tl.isEmpty() || tl.indexOf('|') < 0) break;
+                    if (isSeparator(tl)) {
+                        j++;
+                        continue;
+                    }
+                    rows.add(splitRow(tl));
+                    j++;
+                }
+                if (rows.isEmpty()) {
+                    text.append(lines[i]).append('\n');
+                    continue;
+                }
+                // intestazione vuota ("| | |"): è un elenco chiave/valore, niente header
+                boolean head = !allEmpty(rows.get(0));
+                if (!head) rows.remove(0);
+                flushText(out, text, width);
+                out.add(new Block(null, rows.toArray(new String[0][]), head));
+                i = j - 1;
+                continue;
+            }
+            text.append(lines[i]).append('\n');
+        }
+        flushText(out, text, width);
+        return out;
+    }
+
+    private static boolean allEmpty(String[] row) {
+        for (String c : row) {
+            if (c != null && !c.trim().isEmpty()) return false;
+        }
+        return true;
+    }
+
+    private static void flushText(List<Block> out, StringBuilder text, int cols) {
+        if (text.length() == 0) return;
+        String s = text.toString();
+        text.setLength(0);
+        int k = 0;
+        while (k < s.length() && (s.charAt(k) == '\n' || s.charAt(k) == ' ')) k++;
+        CharSequence cs = build(s.substring(k), cols);
+        if (cs.length() > 0) out.add(new Block(cs, null, false));
+    }
+
     // ------------------------------------------------------------------ build
 
     private static CharSequence build(String src, int cols) {
