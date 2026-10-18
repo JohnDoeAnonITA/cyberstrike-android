@@ -100,7 +100,7 @@ public final class Bootstrap {
         } catch (Exception e) {
             try {
                 c.startActivity(new Intent(Intent.ACTION_VIEW,
-                        android.net.Uri.parse("https://f-droid.org/packages/com.termux/"))
+                        android.net.Uri.parse("https://github.com/termux/termux-app/releases"))
                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             } catch (Exception ignored) {
             }

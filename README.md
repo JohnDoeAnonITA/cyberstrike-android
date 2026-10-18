@@ -47,7 +47,8 @@ APK ~150 KB, senza Gradle, senza dipendenze AndroidX.
 
 ## Requisiti
 
-1. **Termux** da [F-Droid](https://f-droid.org/packages/com.termux/) (la versione del Play Store è obsoleta).
+1. **Termux** da [GitHub Releases](https://github.com/termux/termux-app/releases) — scarica l'APK `arm64-v8a`
+   (evita la versione del Play Store, obsoleta e non compatibile con proot-distro).
 2. In Termux, abilitare l'esecuzione da altre app:
 
    ```bash

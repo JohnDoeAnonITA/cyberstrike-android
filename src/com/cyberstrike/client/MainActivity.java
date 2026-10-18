@@ -278,15 +278,15 @@ public class MainActivity extends Activity {
         new AlertDialog.Builder(this)
                 .setTitle("Termux richiesto")
                 .setMessage("CyberStrike gira dentro Termux.\n\n"
-                        + "1. Installa Termux da F-Droid\n"
+                        + "1. Installa Termux da GitHub Releases (APK arm64-v8a)\n"
                         + "2. Apri Termux una volta e abilita l'esecuzione da altre app:\n"
                         + "   ~/.termux/termux.properties → allow-external-apps = true\n"
                         + "   poi esegui: termux-reload-settings\n\n"
                         + "3. Torna qui e tocca lo stato per riprovare.\n\n"
                         + "In alternativa puoi usare un server CyberStrike remoto: "
                         + "⋮ → Impostazioni → Server URL.")
-                .setPositiveButton("F-Droid", (d, w) ->
-                        openUrl("https://f-droid.org/packages/com.termux/"))
+                .setPositiveButton("GitHub", (d, w) ->
+                        openUrl("https://github.com/termux/termux-app/releases"))
                 .setNeutralButton("Apri Termux", (d, w) -> Bootstrap.openTermux(this))
                 .setNegativeButton("Chiudi", null)
                 .show();
