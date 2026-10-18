@@ -1,129 +1,151 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg"
-    android:orientation="vertical">
+    android:background="#000000">
+
+    <!-- watermark Anonymous Italia -->
+    <ImageView
+        android:id="@+id/watermark"
+        android:layout_width="320dp"
+        android:layout_height="320dp"
+        android:layout_gravity="center"
+        android:alpha="0.13"
+        android:scaleType="fitCenter"
+        android:src="@drawable/asi_watermark"
+        android:contentDescription="@null" />
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingStart="4dp"
-        android:paddingEnd="4dp">
-
-        <TextView
-            android:id="@+id/back"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:gravity="center"
-            android:text="‹"
-            android:textColor="@color/text"
-            android:textSize="30sp"
-            android:background="?android:attr/selectableItemBackgroundBorderless" />
+        android:layout_height="match_parent"
+        android:orientation="vertical">
 
         <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:paddingStart="4dp">
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp">
 
             <TextView
-                android:id="@+id/title"
-                style="@style/HeaderText"
-                android:layout_width="match_parent"
+                android:id="@+id/back"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:gravity="center"
+                android:text="‹"
+                android:textColor="@color/text"
+                android:textSize="30sp"
+                android:background="?android:attr/selectableItemBackgroundBorderless" />
+
+            <ImageView
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_marginEnd="8dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_asi"
+                android:contentDescription="@null" />
+
+            <LinearLayout
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="@string/sessions" />
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/title"
+                    style="@style/HeaderText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/sessions" />
+
+                <TextView
+                    android:id="@+id/sub"
+                    style="@style/SubText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="" />
+            </LinearLayout>
 
             <TextView
-                android:id="@+id/sub"
-                style="@style/SubText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:text="" />
+                android:id="@+id/stop"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:gravity="center"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:text="@string/stop"
+                android:textColor="@color/danger"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:visibility="gone"
+                android:background="?android:attr/selectableItemBackgroundBorderless" />
+
+            <TextView
+                android:id="@+id/overflow"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:gravity="center"
+                android:text="⋮"
+                android:textColor="@color/text_dim"
+                android:textSize="22sp"
+                android:background="?android:attr/selectableItemBackgroundBorderless" />
         </LinearLayout>
 
-        <TextView
-            android:id="@+id/stop"
-            android:layout_width="wrap_content"
-            android:layout_height="40dp"
-            android:gravity="center"
+        <ListView
+            android:id="@+id/list"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:divider="@null"
+            android:dividerHeight="0dp"
+            android:clipToPadding="false"
             android:paddingStart="12dp"
             android:paddingEnd="12dp"
-            android:text="@string/stop"
-            android:textColor="@color/danger"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            android:visibility="gone"
-            android:background="?android:attr/selectableItemBackgroundBorderless" />
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:scrollbars="none"
+            android:transcriptMode="normal" />
 
-        <TextView
-            android:id="@+id/overflow"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:gravity="center"
-            android:text="⋮"
-            android:textColor="@color/text_dim"
-            android:textSize="22sp"
-            android:background="?android:attr/selectableItemBackgroundBorderless" />
-    </LinearLayout>
-
-    <ListView
-        android:id="@+id/list"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:divider="@null"
-        android:dividerHeight="0dp"
-        android:clipToPadding="false"
-        android:paddingStart="12dp"
-        android:paddingEnd="12dp"
-        android:paddingTop="8dp"
-        android:paddingBottom="8dp"
-        android:scrollbars="none"
-        android:stackFromBottom="false"
-        android:transcriptMode="normal" />
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="bottom"
-        android:padding="10dp">
-
-        <EditText
-            android:id="@+id/input"
-            android:layout_width="0dp"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:background="@drawable/bg_input"
-            android:hint="@string/hint_message"
-            android:textColorHint="@color/text_faint"
-            android:textColor="@color/text"
-            android:textSize="15sp"
-            android:minHeight="44dp"
-            android:maxHeight="140dp"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            android:paddingTop="10dp"
-            android:paddingBottom="10dp"
-            android:inputType="textMultiLine|textCapSentences"
-            android:scrollbars="vertical"
-            android:importantForAutofill="no" />
+            android:orientation="horizontal"
+            android:gravity="bottom"
+            android:padding="10dp">
 
-        <TextView
-            android:id="@+id/send"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:layout_marginStart="8dp"
-            android:gravity="center"
-            android:text="↑"
-            android:textColor="#04130A"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            android:background="@drawable/bg_fab" />
+            <EditText
+                android:id="@+id/input"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="@drawable/bg_input"
+                android:hint="@string/hint_message"
+                android:textColorHint="@color/text_faint"
+                android:textColor="@color/text"
+                android:textSize="15sp"
+                android:minHeight="44dp"
+                android:maxHeight="140dp"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:paddingTop="10dp"
+                android:paddingBottom="10dp"
+                android:inputType="textMultiLine|textCapSentences"
+                android:scrollbars="vertical"
+                android:importantForAutofill="no" />
+
+            <TextView
+                android:id="@+id/send"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_marginStart="8dp"
+                android:gravity="center"
+                android:text="↑"
+                android:textColor="#04130A"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:background="@drawable/bg_fab" />
+        </LinearLayout>
     </LinearLayout>
-</LinearLayout>
+</FrameLayout>

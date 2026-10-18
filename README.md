@@ -43,6 +43,7 @@ APK ~150 KB, senza Gradle, senza dipendenze AndroidX.
 - Tema hacker: nero verdastro `#050806`, accento neon `#00E676`
 - Sfondo animato "matrix" (`ui/MatrixView`, ~11 fps, si ferma quando la finestra non è visibile)
 - Header con logo + stato + host del baseURL configurato
+- Chat: sfondo nero pieno con watermark **Anonymous Italia** (logo ASI, alpha 13%)
 
 ## Requisiti
 
