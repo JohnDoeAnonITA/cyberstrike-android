@@ -1,0 +1,11 @@
+.build/
+ks.jks
+*.apk
+classes/
+gen/
+dex/
+res.zip
+unsigned.apk
+app.apk
+aligned.apk
+*.idsig

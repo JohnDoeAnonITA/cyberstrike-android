@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bg">#0B0D10</color>
+    <color name="bg_elev">#141821</color>
+    <color name="bg_elev2">#1B2130</color>
+    <color name="stroke">#263040</color>
+    <color name="text">#E6EAF0</color>
+    <color name="text_dim">#8B97A8</color>
+    <color name="text_faint">#5A6677</color>
+    <color name="accent">#FF6A3D</color>
+    <color name="accent_dim">#3A241C</color>
+    <color name="ok">#3DDC97</color>
+    <color name="danger">#FF4D5E</color>
+    <color name="warn">#F5C451</color>
+</resources>

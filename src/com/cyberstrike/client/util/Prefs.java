@@ -1,0 +1,55 @@
+package com.cyberstrike.client.util;
+
+import android.content.Context;
+import android.content.SharedPreferences;
+
+public final class Prefs {
+
+    private static SharedPreferences sp(Context c) {
+        return c.getSharedPreferences("cyberstrike", Context.MODE_PRIVATE);
+    }
+
+    public static String base(Context c) {
+        return sp(c).getString("base", "http://127.0.0.1:4096");
+    }
+
+    public static void setBase(Context c, String v) {
+        sp(c).edit().putString("base", v).apply();
+    }
+
+    public static String token(Context c) {
+        return sp(c).getString("token", "");
+    }
+
+    public static void setToken(Context c, String v) {
+        sp(c).edit().putString("token", v).apply();
+    }
+
+    public static String agent(Context c) {
+        return sp(c).getString("agent", "cyberstrike");
+    }
+
+    public static void setAgent(Context c, String v) {
+        sp(c).edit().putString("agent", v).apply();
+    }
+
+    public static String provider(Context c) {
+        return sp(c).getString("provider", "");
+    }
+
+    public static String model(Context c) {
+        return sp(c).getString("model", "");
+    }
+
+    public static void setModel(Context c, String providerID, String modelID) {
+        sp(c).edit().putString("provider", providerID).putString("model", modelID).apply();
+    }
+
+    public static boolean autostart(Context c) {
+        return sp(c).getBoolean("autostart", true);
+    }
+
+    public static void setAutostart(Context c, boolean v) {
+        sp(c).edit().putBoolean("autostart", v).apply();
+    }
+}

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">CyberStrike</string>
+    <string name="sessions">Sessioni</string>
+    <string name="new_session">Nuova sessione</string>
+    <string name="no_sessions">Nessuna sessione.\nTocca + per crearne una.</string>
+    <string name="connecting">Connessione…</string>
+    <string name="offline">Server non raggiungibile</string>
+    <string name="online">Online</string>
+    <string name="starting">Avvio server…</string>
+    <string name="send">Invia</string>
+    <string name="stop">Ferma</string>
+    <string name="hint_message">Scrivi un messaggio…</string>
+    <string name="retry">Riprova</string>
+    <string name="terminal">Terminale</string>
+    <string name="settings">Impostazioni</string>
+    <string name="delete">Elimina</string>
+    <string name="cancel">Annulla</string>
+    <string name="allow_once">Consenti una volta</string>
+    <string name="allow_always">Consenti sempre</string>
+    <string name="deny">Nega</string>
+</resources>
