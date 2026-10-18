@@ -16,6 +16,7 @@ import android.widget.TextView;
 
 import com.cyberstrike.client.api.CsClient;
 import com.cyberstrike.client.api.EventStream;
+import com.cyberstrike.client.ui.ModelTreePicker;
 import com.cyberstrike.client.ui.MsgAdapter;
 import com.cyberstrike.client.util.Diag;
 import com.cyberstrike.client.util.Prefs;
@@ -25,7 +26,6 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -653,39 +653,25 @@ public class ChatActivity extends Activity {
         io.execute(new Runnable() {
             @Override
             public void run() {
-                final List<String> labels = new ArrayList<>();
-                final List<String[]> pairs = new ArrayList<>();
+                JSONArray arr = null;
                 try {
-                    JSONArray arr = api.providers().optJSONArray("providers");
-                    if (arr != null) {
-                        for (int i = 0; i < arr.length(); i++) {
-                            JSONObject p = arr.getJSONObject(i);
-                            String pid = p.optString("id");
-                            String pname = p.optString("name", pid);
-                            JSONObject models = p.optJSONObject("models");
-                            if (models == null) continue;
-                            Iterator<String> it = models.keys();
-                            while (it.hasNext()) {
-                                String mid = it.next();
-                                JSONObject mo = models.optJSONObject(mid);
-                                labels.add(pname + " · " + (mo == null ? mid : mo.optString("name", mid)));
-                                pairs.add(new String[]{pid, mid});
-                            }
-                        }
-                    }
+                    arr = api.providers().optJSONArray("providers");
                 } catch (Exception ignored) {
                 }
+                final JSONArray fps = arr;
                 ui.post(new Runnable() {
                     @Override
                     public void run() {
-                        new AlertDialog.Builder(ChatActivity.this)
-                                .setTitle("Modello")
-                                .setItems(labels.toArray(new String[0]), (d, w) -> {
-                                    String[] p = pairs.get(w);
-                                    Prefs.setModel(ChatActivity.this, p[0], p[1]);
-                                    Ui.toast(ChatActivity.this, "Modello aggiornato");
-                                })
-                                .show();
+                        ModelTreePicker.show(ChatActivity.this, fps,
+                                Prefs.provider(ChatActivity.this),
+                                Prefs.model(ChatActivity.this),
+                                new ModelTreePicker.Listener() {
+                                    @Override
+                                    public void onPick(String providerID, String modelID) {
+                                        Prefs.setModel(ChatActivity.this, providerID, modelID);
+                                        Ui.toast(ChatActivity.this, "Modello aggiornato");
+                                    }
+                                });
                     }
                 });
             }
