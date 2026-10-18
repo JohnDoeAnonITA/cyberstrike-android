@@ -29,8 +29,14 @@ port_open() {
   return 0
 }
 
+notify() {
+  command -v termux-notification >/dev/null 2>&1 && \
+    termux-notification --title "CyberStrike" --content "$1" >/dev/null 2>&1 || true
+}
+
 fail() {
   echo "!! FAILED: $*"
+  notify "Setup fallito: $*"
   echo "$(date '+%F %T') $*" > "$FAIL"
   exit 1
 }
@@ -74,12 +80,26 @@ test -x /root/.cyberstrike/bin/cyberstrike
 fi
 
 # --- 5. avvio server -------------------------------------------------------
+# --- 5. password del server -----------------------------------------------
+# CYBERSTRIKE_SERVER_PASSWORD è obbligatoria: senza, il server esce subito.
+# proot-distro login non carica ~/.bashrc, quindi va passata esplicitamente.
+PW_FILE="$HOME/.cs-server-password"
+if [ ! -s "$PW_FILE" ]; then
+  # password casuale dedicata all'app: generata una volta e persistita.
+  # NON viene mai riusata la password dell'utente (~/.bashrc).
+  PW=$(head -c 96 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 24)
+  printf '%s' "$PW" > "$PW_FILE"
+  chmod 600 "$PW_FILE"
+  echo "-- password server generata e salvata in $PW_FILE"
+fi
+PW=$(cat "$PW_FILE")
+
 if port_open; then
   echo "-- server già in ascolto su :$PORT"
 else
-  echo "-- avvio cyberstrike web"
-  nohup proot-distro login debian -- \
-    /root/.cyberstrike/bin/cyberstrike web --port "$PORT" --hostname 127.0.0.1 \
+  echo "-- avvio cyberstrike serve su :$PORT"
+  nohup proot-distro login debian -- env CYBERSTRIKE_SERVER_PASSWORD="$PW" \
+    /root/.cyberstrike/bin/cyberstrike serve --port "$PORT" --hostname 127.0.0.1 \
     >>"$HOME/.cyberstrike-server.log" 2>&1 &
   disown 2>/dev/null || true
 
@@ -87,10 +107,15 @@ else
     port_open && break
     sleep 1
   done
-  port_open || fail "il server non risponde su :$PORT"
+  if ! port_open; then
+    echo "-- ultime righe del server:"
+    tail -5 "$HOME/.cyberstrike-server.log"
+    fail "il server non risponde su :$PORT"
+  fi
 fi
 
 echo "$(date '+%F %T') bootstrap OK"
+notify "Server pronto su 127.0.0.1:$PORT"
 touch "$DONE"
 echo "=== $(date '+%F %T') bootstrap end ==="
 exit 0

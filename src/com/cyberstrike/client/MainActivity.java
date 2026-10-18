@@ -57,6 +57,7 @@ public class MainActivity extends Activity {
     private View empty;
 
     private volatile boolean booting;
+    private volatile boolean online;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -318,6 +319,8 @@ public class MainActivity extends Activity {
     }
 
     private void onOnline() {
+        online = true;
+        findViewById(R.id.fab).setAlpha(1f);
         String v = api.version();
         setStatus(getString(R.string.online) + (v.isEmpty() ? "" : "  ·  v" + v), true);
         refresh();
@@ -325,6 +328,8 @@ public class MainActivity extends Activity {
     }
 
     private void onOffline() {
+        online = false;
+        findViewById(R.id.fab).setAlpha(0.35f);
         setStatus(getString(R.string.offline), false);
         Ui.toast(this, "Server non raggiungibile. Tocca lo stato per riprovare, "
                 + "oppure usa ⋮ → Installa / avvia.");
@@ -371,6 +376,10 @@ public class MainActivity extends Activity {
     }
 
     private void newSession() {
+        if (!online) {
+            Ui.toast(this, "Server non connesso — attendi l'avvio o tocca lo stato");
+            return;
+        }
         io.execute(new Runnable() {
             @Override
             public void run() {
