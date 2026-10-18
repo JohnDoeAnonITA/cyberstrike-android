@@ -185,14 +185,16 @@ public class ModelsActivity extends Activity {
                     }
                     boolean active = id.equals(ap) && mid.equals(am);
                     String def = Prefs.providerDefault(this, id);
+                    JSONObject mo = models.optJSONObject(mid);
+                    String mname = mo == null ? mid : mo.optString("name", mid);
 
                     Row mr = new Row();
                     mr.kind = K_MODEL;
                     mr.providerID = id;
                     mr.modelID = mid;
-                    mr.title = (active ? "●  " : "○  ") + mid
-                            + (mid.equals(def) ? "   ★" : "");
-                    mr.sub = active ? "in uso" : (mid.equals(def) ? "predefinito di " + name : "");
+                    mr.title = (active ? "●  " : "○  ") + mname
+                            + (mid.equals(def) ? "  ★" : "");
+                    mr.sub = mid;   // colonna destra: id tecnico
                     rows.add(mr);
                 }
                 if (hiddenCount > 0) {
@@ -866,21 +868,25 @@ public class ModelsActivity extends Activity {
         }
 
         public View getView(int pos, View cv, ViewGroup parent) {
-            CheckBox cb = (cv instanceof CheckBox) ? (CheckBox) cv
-                    : new CheckBox(ModelsActivity.this);
+            if (cv == null) {
+                cv = getLayoutInflater().inflate(R.layout.item_model_pick, parent, false);
+            }
             final String[] m = items.get(pos);
-            cb.setText(m[1].equals(m[0]) ? m[0] : (m[1] + "  ·  " + m[0]));
-            cb.setTextColor(0xFFD9F7E6);
-            cb.setTextSize(13f);
-            cb.setPadding(Ui.dp(ModelsActivity.this, 8), Ui.dp(ModelsActivity.this, 4),
-                    Ui.dp(ModelsActivity.this, 8), Ui.dp(ModelsActivity.this, 4));
-            cb.setOnCheckedChangeListener(null);
+            final CheckBox cb = (CheckBox) cv.findViewById(R.id.check);
+            ((TextView) cv.findViewById(R.id.name)).setText(m[1]);
+            ((TextView) cv.findViewById(R.id.mid)).setText(m[0]);
+
             cb.setChecked(checked.contains(m[0]));
-            cb.setOnCheckedChangeListener((b, isChecked) -> {
-                if (isChecked) checked.add(m[0]);
-                else checked.remove(m[0]);
+            cv.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    boolean now = !checked.contains(m[0]);
+                    if (now) checked.add(m[0]);
+                    else checked.remove(m[0]);
+                    cb.setChecked(now);
+                }
             });
-            return cb;
+            return cv;
         }
     }
 
@@ -922,11 +928,32 @@ public class ModelsActivity extends Activity {
             return i;
         }
 
+        @Override
+        public int getViewTypeCount() {
+            return 2;
+        }
+
+        @Override
+        public int getItemViewType(int position) {
+            return items.get(position).kind == K_MODEL ? 1 : 0;
+        }
+
         public View getView(int pos, View cv, ViewGroup parent) {
+            Row r = items.get(pos);
+
+            // righe modello: tabella nome | id
+            if (r.kind == K_MODEL) {
+                if (cv == null) {
+                    cv = getLayoutInflater().inflate(R.layout.item_model_table, parent, false);
+                }
+                ((TextView) cv.findViewById(R.id.name)).setText(r.title);
+                ((TextView) cv.findViewById(R.id.mid)).setText(r.sub);
+                return cv;
+            }
+
             if (cv == null) {
                 cv = getLayoutInflater().inflate(R.layout.item_model_row, parent, false);
             }
-            Row r = items.get(pos);
             TextView t = (TextView) cv.findViewById(R.id.title);
             TextView s = (TextView) cv.findViewById(R.id.sub);
 
@@ -947,13 +974,6 @@ public class ModelsActivity extends Activity {
                     t.setTextSize(15f);
                     t.setTextColor(0xFFD9F7E6);
                     t.setTypeface(null, android.graphics.Typeface.BOLD);
-                    break;
-                case K_MODEL:
-                    cv.setPadding(Ui.dp(ModelsActivity.this, 20), Ui.dp(ModelsActivity.this, 5),
-                            Ui.dp(ModelsActivity.this, 4), Ui.dp(ModelsActivity.this, 5));
-                    t.setTextSize(14f);
-                    t.setTextColor(0xFFD9F7E6);
-                    t.setTypeface(null, android.graphics.Typeface.NORMAL);
                     break;
                 case K_DISABLED:
                     t.setTextSize(14f);
