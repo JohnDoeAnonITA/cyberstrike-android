@@ -47,8 +47,10 @@ APK ~150 KB, senza Gradle, senza dipendenze AndroidX.
 
 ## Requisiti
 
-1. **Termux** da [GitHub Releases](https://github.com/termux/termux-app/releases) — scarica l'APK `arm64-v8a`
-   (evita la versione del Play Store, obsoleta e non compatibile con proot-distro).
+1. **Termux** — l'app lo scarica da GitHub Releases e apre l'installer
+   (serve consentire le sorgenti sconosciute per CyberStrike).
+   In alternativa: [GitHub Releases](https://github.com/termux/termux-app/releases), APK `arm64-v8a`.
+   Evita la versione del Play Store, obsoleta e non compatibile con proot-distro.
 2. In Termux, abilitare l'esecuzione da altre app:
 
    ```bash

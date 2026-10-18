@@ -17,6 +17,7 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.PopupMenu;
+import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 
@@ -26,11 +27,13 @@ import com.cyberstrike.client.util.Bootstrap;
 import com.cyberstrike.client.util.Diag;
 import com.cyberstrike.client.util.Prefs;
 import com.cyberstrike.client.util.ServerStarter;
+import com.cyberstrike.client.util.TermuxInstaller;
 import com.cyberstrike.client.util.Ui;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -135,6 +138,8 @@ public class MainActivity extends Activity {
         if (!booting) {
             refresh();
             startEvents();
+            // tornando dall'installazione di Termux si riprova da soli
+            if (!online && ServerStarter.installed(this)) boot();
         }
     }
 
@@ -278,18 +283,104 @@ public class MainActivity extends Activity {
         new AlertDialog.Builder(this)
                 .setTitle("Termux richiesto")
                 .setMessage("CyberStrike gira dentro Termux.\n\n"
-                        + "1. Installa Termux da GitHub Releases (APK arm64-v8a)\n"
+                        + "1. Tocca «Scarica e installa»: l'app scarica l'APK adatto "
+                        + "al tuo dispositivo dalle release GitHub e apre l'installer "
+                        + "(serve consentire le sorgenti sconosciute).\n"
                         + "2. Apri Termux una volta e abilita l'esecuzione da altre app:\n"
                         + "   ~/.termux/termux.properties → allow-external-apps = true\n"
                         + "   poi esegui: termux-reload-settings\n\n"
-                        + "3. Torna qui e tocca lo stato per riprovare.\n\n"
+                        + "3. Torna qui: riprova da sola.\n\n"
                         + "In alternativa puoi usare un server CyberStrike remoto: "
                         + "⋮ → Impostazioni → Server URL.")
-                .setPositiveButton("GitHub", (d, w) ->
-                        openUrl("https://github.com/termux/termux-app/releases"))
-                .setNeutralButton("Apri Termux", (d, w) -> Bootstrap.openTermux(this))
+                .setPositiveButton("Scarica e installa", (d, w) -> installTermux())
+                .setNeutralButton("GitHub", (d, w) -> openUrl(TermuxInstaller.releasesPage()))
                 .setNegativeButton("Chiudi", null)
                 .show();
+    }
+
+    /** Scarica l'APK di Termux e lancia l'installer di sistema. */
+    private void installTermux() {
+        if (!TermuxInstaller.canInstall(this)) {
+            TermuxInstaller.openUnknownSources(this);
+            Ui.toast(this, "Consenti l'installazione da CyberStrike, poi riprova");
+            return;
+        }
+
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        int pad = Ui.dp(this, 20);
+        box.setPadding(pad, pad, pad, pad);
+
+        final TextView msg = new TextView(this);
+        msg.setText("Scarico Termux…");
+        msg.setTextColor(0xFFD9F7E6);
+        final ProgressBar bar = new ProgressBar(this, null,
+                android.R.attr.progressBarStyleHorizontal);
+        bar.setMax(100);
+        box.addView(msg);
+        box.addView(bar);
+
+        final AlertDialog dlg = new AlertDialog.Builder(this)
+                .setTitle("Installa Termux")
+                .setView(box)
+                .setCancelable(false)
+                .setNegativeButton("Annulla", null)
+                .create();
+        dlg.show();
+
+        io.execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    String url = TermuxInstaller.resolveApkUrl();
+                    Diag.add("termux", "apk " + url);
+                    final File f = TermuxInstaller.download(MainActivity.this, url,
+                            new TermuxInstaller.Progress() {
+                                @Override
+                                public void onProgress(final int pct) {
+                                    ui.post(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            bar.setProgress(pct);
+                                            msg.setText("Scarico Termux… " + pct + "%");
+                                        }
+                                    });
+                                }
+                            });
+                    Diag.add("termux", "scaricato " + f.length() / 1024 + " KB");
+                    ui.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            dlg.dismiss();
+                            try {
+                                TermuxInstaller.install(MainActivity.this, f);
+                                Ui.toast(MainActivity.this,
+                                        "Completa l'installazione, poi torna qui");
+                            } catch (Exception e) {
+                                Diag.add("termux", "installer: " + e.getMessage());
+                                Ui.toast(MainActivity.this, "Installer non disponibile");
+                            }
+                        }
+                    });
+                } catch (final Exception e) {
+                    Diag.add("termux", "errore: " + e.getMessage());
+                    ui.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            dlg.dismiss();
+                            new AlertDialog.Builder(MainActivity.this)
+                                    .setTitle("Download fallito")
+                                    .setMessage(e.getMessage()
+                                            + "\n\nPuoi scaricarlo dal browser.")
+                                    .setPositiveButton("GitHub", (d2, w2) ->
+                                            openUrl(TermuxInstaller.releasesPage()))
+                                    .setNegativeButton("Chiudi", null)
+                                    .show();
+                        }
+                    });
+                }
+            }
+        });
     }
 
     private void showDiagnostics() {
