@@ -38,6 +38,11 @@
             android:windowSoftInputMode="adjustResize" />
 
         <activity
+            android:name=".ModelsActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|uiMode" />
+
+        <activity
             android:name=".TerminalActivity"
             android:exported="false"
             android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|uiMode"

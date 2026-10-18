@@ -178,7 +178,15 @@ public class ChatActivity extends Activity {
         String name = err.optString("name", "Errore");
         JSONObject data = err.optJSONObject("data");
         String msg = data == null ? "" : data.optString("message", "");
-        return "✖ " + name + (msg.isEmpty() ? "" : "\n" + msg);
+        return "✖ " + name + (msg.isEmpty() ? "" : "\n" + hint(msg));
+    }
+
+    private static String hint(String msg) {
+        if (msg != null && msg.contains("Unable to connect")) {
+            return msg + "\n\nSuggerimento: provider non raggiungibile. "
+                    + "Scegli un altro modello con \u22ee \u2192 Modello.";
+        }
+        return msg;
     }
 
     private MsgAdapter.Row rowForPart(JSONObject p) {
@@ -275,15 +283,29 @@ public class ChatActivity extends Activity {
         hideKeyboard();
         Diag.add("chat", "send " + text.length() + " char");
 
-        final String agent = Prefs.agent(this);
-        final String provider = Prefs.provider(this);
-        final String model = Prefs.model(this);
-
         io.execute(new Runnable() {
             @Override
             public void run() {
                 try {
-                    api.sendMessage(sessionID, text, agent, provider, model, directory);
+                    String provider = Prefs.provider(ChatActivity.this);
+                    String model = Prefs.model(ChatActivity.this);
+                    if (provider.isEmpty() || model.isEmpty()) {
+                        String[] picked = api.pickModel(Prefs.providerDefaults(ChatActivity.this));
+                        if (picked != null) {
+                            provider = picked[0];
+                            model = picked[1];
+                            final String fp = picked[0], fm = picked[1];
+                            ui.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    Prefs.setModel(ChatActivity.this, fp, fm);
+                                }
+                            });
+                            Diag.add("model", "auto " + provider + " / " + model);
+                        }
+                    }
+                    api.sendMessage(sessionID, text, Prefs.agent(ChatActivity.this),
+                            provider, model, directory);
                     ui.post(new Runnable() {
                         @Override
                         public void run() {

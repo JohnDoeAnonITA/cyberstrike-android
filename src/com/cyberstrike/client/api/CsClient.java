@@ -257,6 +257,120 @@ public class CsClient {
         return getObj("/config/providers", 15000);
     }
 
+    public JSONObject configObj() throws ApiException {
+        return getObj("/config" + dir("/"), 15000);
+    }
+
+    public void patchConfig(JSONObject patch) throws ApiException {
+        request("PATCH", "/config" + dir("/"), patch.toString(), 20000);
+    }
+
+    /** Salva una API key per un provider. */
+    public void setAuth(String providerID, String key) throws ApiException {
+        JSONObject b = new JSONObject();
+        try {
+            b.put("type", "api");
+            b.put("key", key);
+        } catch (Exception ignored) {
+        }
+        request("PUT", "/auth/" + providerID, b.toString(), 20000);
+    }
+
+    /** Aggiunge (o aggiorna) un provider con il suo primo modello. */
+    public void addProvider(String id, String name, String baseURL,
+                            String modelID, String modelName) throws ApiException {
+        try {
+            JSONObject options = new JSONObject();
+            if (baseURL != null && !baseURL.isEmpty()) options.put("baseURL", baseURL);
+
+            JSONObject model = new JSONObject().put("id", modelID).put("name", modelName);
+            JSONObject models = new JSONObject().put(modelID, model);
+
+            JSONObject provider = new JSONObject()
+                    .put("name", name)
+                    .put("npm", "@ai-sdk/openai-compatible")
+                    .put("models", models)
+                    .put("options", options);
+
+            patchConfig(new JSONObject()
+                    .put("provider", new JSONObject().put(id, provider)));
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException(0, "payload: " + e.getMessage());
+        }
+    }
+
+    /** Aggiunge (o aggiorna) un modello dentro un provider esistente. */
+    public void addModel(String providerID, String modelID, String name) throws ApiException {
+        try {
+            JSONObject model = new JSONObject().put("id", modelID).put("name", name);
+            JSONObject provider = new JSONObject()
+                    .put("models", new JSONObject().put(modelID, model));
+            patchConfig(new JSONObject()
+                    .put("provider", new JSONObject().put(providerID, provider)));
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException(0, "payload: " + e.getMessage());
+        }
+    }
+
+    /** Disattiva (nasconde) una lista di provider. */
+    public void setDisabledProviders(JSONArray ids) throws ApiException {
+        try {
+            patchConfig(new JSONObject().put("disabled_providers", ids));
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApiException(0, "payload: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Sceglie un provider/modello utilizzabile: preferisce i provider remoti
+     * (evita Ollama/LM Studio locali che spesso sono spenti).
+     */
+    public String[] pickModel() {
+        return pickModel(null);
+    }
+
+    /** Come pickModel(), ma rispetta il modello predefinito scelto nell'app. */
+    public String[] pickModel(java.util.Map<String, String> appDefaults) {
+        try {
+            JSONObject pr = providers();
+            JSONArray arr = pr.optJSONArray("providers");
+            JSONObject defs = pr.optJSONObject("default");
+            if (arr == null) return null;
+
+            String[] localFallback = null;
+            for (int i = 0; i < arr.length(); i++) {
+                JSONObject p = arr.optJSONObject(i);
+                if (p == null) continue;
+                String id = p.optString("id", "");
+                JSONObject models = p.optJSONObject("models");
+                if (id.isEmpty() || models == null || models.length() == 0) continue;
+
+                JSONObject opt = p.optJSONObject("options");
+                String base = opt == null ? "" : opt.optString("baseURL", "");
+                boolean local = base.contains("localhost") || base.contains("127.0.0.1")
+                        || base.contains("192.168.") || base.contains("10.0.");
+
+                String mid = appDefaults == null ? "" : appDefaults.get(id);
+                if (mid == null || mid.isEmpty()) mid = defs == null ? "" : defs.optString(id, "");
+                if (mid.isEmpty()) mid = models.keys().next();
+
+                String[] pair = new String[]{id, mid};
+                if (!local) return pair;
+                if (localFallback == null) localFallback = pair;
+            }
+            return localFallback;
+        } catch (Exception e) {
+            Diag.add("model", "pickModel: " + e.getMessage());
+            return null;
+        }
+    }
+
     // ------------------------------------------------------------ permission
 
     public JSONArray permissions(String directory) throws ApiException {

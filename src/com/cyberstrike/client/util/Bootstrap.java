@@ -56,11 +56,17 @@ public final class Bootstrap {
     }
 
     public static boolean run(Context c) {
+        return run(c, "");
+    }
+
+    /** Esegue il bootstrap anteponendo un preludio shell (es. modifica config). */
+    public static boolean run(Context c, String prelude) {
         if (!ServerStarter.installed(c)) return false;
         String s = script(c);
         if (s == null || s.isEmpty()) return false;
         // il bootstrap deve avviare il server sulla stessa porta dell'app
-        String full = "export CS_PORT=" + portOf(Prefs.base(c)) + "\n" + s;
+        String full = (prelude == null || prelude.isEmpty() ? "" : prelude + "\n")
+                + "export CS_PORT=" + portOf(Prefs.base(c)) + "\n" + s;
         Diag.add("bootstrap", "run (porta " + portOf(Prefs.base(c)) + ")");
         try {
             Intent i = new Intent("com.termux.RUN_COMMAND");

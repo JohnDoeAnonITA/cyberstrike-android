@@ -325,6 +325,26 @@ public class MainActivity extends Activity {
         setStatus(getString(R.string.online) + (v.isEmpty() ? "" : "  ·  v" + v), true);
         refresh();
         startEvents();
+        ensureModel();
+    }
+
+    /** Se non c'è un modello salvato, ne sceglie uno raggiungibile. */
+    private void ensureModel() {
+        if (!Prefs.model(this).isEmpty()) return;
+        io.execute(new Runnable() {
+            @Override
+            public void run() {
+                final String[] p = api.pickModel(Prefs.providerDefaults(MainActivity.this));
+                if (p == null) return;
+                ui.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        Prefs.setModel(MainActivity.this, p[0], p[1]);
+                        Diag.add("model", "default " + p[0] + " / " + p[1]);
+                    }
+                });
+            }
+        });
     }
 
     private void onOffline() {
@@ -463,6 +483,7 @@ public class MainActivity extends Activity {
         m.getMenu().add(0, 6, 5, "Impostazioni");
         m.getMenu().add(0, 7, 6, "Diagnostica");
         m.getMenu().add(0, 8, 7, "Richiedi permesso Termux");
+        m.getMenu().add(0, 9, 8, "Modelli e provider");
         m.setOnMenuItemClickListener(item -> {
             switch (item.getItemId()) {
                 case 1:
@@ -489,6 +510,9 @@ public class MainActivity extends Activity {
                 case 8:
                     Prefs.setPermAsked(this, false);
                     boot();
+                    return true;
+                case 9:
+                    startActivity(new Intent(this, ModelsActivity.class));
                     return true;
             }
             return false;

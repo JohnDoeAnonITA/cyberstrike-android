@@ -85,6 +85,23 @@ Menu `⋮` → **Impostazioni**:
 - **Avvio automatico** — bootstrap all'apertura.
 
 
+## Modelli e provider
+
+`⋮ → Modelli e provider`:
+
+- **scegli** il provider/modello attivo (tap sul modello)
+- **aggiungi provider**: id, nome, baseURL, API key opzionale (`PUT /auth/{id}`), primo modello
+- **aggiungi modello** a un provider esistente
+- **disattiva / riattiva** provider (`disabled_providers`, reversibile)
+- **predefinito per provider** (★): usato dall'auto-selezione quando il modello attivo non è impostato
+- **elimina provider/modello dal server**: modifica `/cyberstrike.json` via Termux e riavvia
+  solo il server dell'app (porta 27182). L'istanza principale su 4096 non viene toccata.
+
+Note tecniche:
+- `PATCH /config` fa un **merge profondo** e scrive in `<progetto>/cyberstrike.json`;
+  non esiste un endpoint di delete, da cui il percorso via file+restart.
+- Le API key finiscono in `~/.local/share/cyberstrike/auth.json`.
+
 ## Permessi
 
 Le sessioni create dall'app usano di default il ruleset:

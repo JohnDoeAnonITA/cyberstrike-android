@@ -94,6 +94,16 @@ if [ ! -s "$PW_FILE" ]; then
 fi
 PW=$(cat "$PW_FILE")
 
+# --- restart esplicito (dopo modifiche alla config fatte dall'app) ----------
+if [ "${CS_RESTART:-0}" = "1" ]; then
+  P=$(pgrep -f "^/root/.cyberstrike/bin/cyberstrike serve --port $PORT" | head -1)
+  if [ -n "$P" ]; then
+    echo "-- restart: termino il server (pid $P)"
+    kill "$P" 2>/dev/null || true
+    for i in $(seq 1 15); do port_open || break; sleep 1; done
+  fi
+fi
+
 if port_open; then
   echo "-- server già in ascolto su :$PORT"
 else
