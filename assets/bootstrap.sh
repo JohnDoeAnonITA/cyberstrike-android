@@ -2,7 +2,7 @@
 # ---------------------------------------------------------------------------
 # CyberStrike bootstrap per Termux — idempotente.
 # Eseguito dall'app via RUN_COMMAND. Installa proot-distro + Debian + CyberStrike
-# se mancanti, poi avvia il server su 127.0.0.1:4096.
+# se mancanti, poi avvia il server su 127.0.0.1:27182.
 # ---------------------------------------------------------------------------
 set -u
 
@@ -11,7 +11,7 @@ export PATH="$PREFIX/bin:$PATH"
 LOG="$HOME/.cyberstrike-setup.log"
 DONE="$HOME/.cs-setup.done"
 FAIL="$HOME/.cs-setup.failed"
-PORT="${CS_PORT:-4096}"
+PORT="${CS_PORT:-27182}"
 
 exec >>"$LOG" 2>&1
 rm -f "$FAIL"

@@ -27,7 +27,7 @@
             android:textColor="@color/text"
             android:textSize="14sp"
             android:inputType="textUri"
-            android:hint="http://127.0.0.1:4096"
+            android:hint="http://127.0.0.1:27182"
             android:textColorHint="@color/text_faint" />
 
         <TextView

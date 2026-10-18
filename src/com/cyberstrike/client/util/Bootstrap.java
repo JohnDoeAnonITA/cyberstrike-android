@@ -5,6 +5,7 @@ import android.content.Intent;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -29,16 +30,40 @@ public final class Bootstrap {
         }
     }
 
+    /** true se l'URL punta al server locale (dove ha senso fare il bootstrap). */
+    public static boolean isLocal(String base) {
+        try {
+            String host = new URL(base).getHost();
+            return "127.0.0.1".equals(host) || "localhost".equals(host) || "::1".equals(host);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /** Porta dell'URL configurato (default 27182). */
+    public static int portOf(String base) {
+        try {
+            URL u = new URL(base);
+            int p = u.getPort();
+            if (p > 0) return p;
+            return "https".equalsIgnoreCase(u.getProtocol()) ? 443 : 80;
+        } catch (Exception e) {
+            return 27182;
+        }
+    }
+
     public static boolean run(Context c) {
         if (!ServerStarter.installed(c)) return false;
         String s = script(c);
         if (s == null || s.isEmpty()) return false;
+        // il bootstrap deve avviare il server sulla stessa porta dell'app
+        String full = "export CS_PORT=" + portOf(Prefs.base(c)) + "\n" + s;
         try {
             Intent i = new Intent("com.termux.RUN_COMMAND");
             i.setClassName(ServerStarter.TERMUX, "com.termux.app.RunCommandService");
             i.putExtra("com.termux.RUN_COMMAND_PATH",
                     "/data/data/com.termux/files/usr/bin/bash");
-            i.putExtra("com.termux.RUN_COMMAND_ARGUMENTS", new String[]{"-lc", s});
+            i.putExtra("com.termux.RUN_COMMAND_ARGUMENTS", new String[]{"-lc", full});
             i.putExtra("com.termux.RUN_COMMAND_WORKDIR",
                     "/data/data/com.termux/files/home");
             i.putExtra("com.termux.RUN_COMMAND_BACKGROUND", true);

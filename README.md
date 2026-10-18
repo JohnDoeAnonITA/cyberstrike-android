@@ -11,7 +11,7 @@ APK ~150 KB, senza Gradle, senza dipendenze AndroidX.
 │  ├─ Permessi / Domande       │
 │  └─ Terminale (PTY)          │
 └───────────┬──────────────────┘
-            │ HTTP + SSE  →  127.0.0.1:4096
+            │ HTTP + SSE  →  127.0.0.1:27182
 ┌───────────▼──────────────────┐
 │ Termux → proot Debian        │
 │   cyberstrike web            │
@@ -51,22 +51,29 @@ Scarica l'APK dall'ultima [Release](../../releases) e installalo
 
 Al primo avvio l'app:
 
-1. verifica se il server risponde su `127.0.0.1:4096`;
+1. verifica se il server risponde su `127.0.0.1:27182`;
 2. se non risponde, esegue `assets/bootstrap.sh` dentro Termux:
    - installa `proot-distro` se manca;
    - installa Debian se manca;
    - installa `curl`/`tar` nel container;
    - scarica e installa CyberStrike se `~/.cyberstrike/bin/cyberstrike` non esiste;
-   - avvia `cyberstrike web` su `127.0.0.1:4096`;
+   - avvia `cyberstrike web` su `127.0.0.1:27182`;
 3. attende che `/global/health` risponda (fino a 30 minuti al primo avvio).
 
 Il log dell'installazione è in `~/.cyberstrike-setup.log` (dentro Termux).
+
+### Porta
+
+L'app usa **27182** come default (non 4096, che è il default di CyberStrike e
+spesso già occupato da un'istanza avviata a mano). La porta si cambia da
+`⋮ → Impostazioni → Server URL`; il bootstrap avvia il server sulla porta
+dell'URL configurato.
 
 ## Configurazione
 
 Menu `⋮` → **Impostazioni**:
 
-- **Server URL** — default `http://127.0.0.1:4096`. Può puntare a un server remoto.
+- **Server URL** — default `http://127.0.0.1:27182`. Può puntare a un server remoto.
 - **Token** — inviato come `Authorization: Bearer …` se il server lo richiede.
 - **Agente** — default `cyberstrike`.
 - **Modello** — provider/modello da `/config/providers`.
@@ -94,7 +101,7 @@ L'API di CyberStrike esegue comandi shell e ha, in configurazione tipica,
 `"bash": { "*": "allow" }`. Di conseguenza:
 
 - il server ascolta **solo** su `127.0.0.1` (default) e non va esposto in LAN;
-- **qualsiasi app Android** con permesso INTERNET può raggiungere `127.0.0.1:4096`:
+- **qualsiasi app Android** con permesso INTERNET può raggiungere `127.0.0.1:27182`:
   su un dispositivo non fidato è un rischio di esecuzione comandi;
 - se esponi il server (es. `--hostname 0.0.0.0`), metti un reverse proxy con TLS e
   autenticazione e configura il token nell'app.

@@ -150,7 +150,9 @@ public class MainActivity extends Activity {
                     return;
                 }
 
-                if (!Prefs.autostart(MainActivity.this)) {
+                if (!Prefs.autostart(MainActivity.this)
+                        || !Bootstrap.isLocal(Prefs.base(MainActivity.this))) {
+                    // server remoto o autostart disattivo: nessun bootstrap locale
                     done(false);
                     return;
                 }
@@ -519,7 +521,7 @@ public class MainActivity extends Activity {
                 .setView(v)
                 .setPositiveButton("Salva", (d, w) -> {
                     String u = url.getText().toString().trim();
-                    if (u.isEmpty()) u = "http://127.0.0.1:4096";
+                    if (u.isEmpty()) u = "http://127.0.0.1:27182";
                     Prefs.setBase(this, u);
                     Prefs.setToken(this, token.getText().toString().trim());
                     Prefs.setAutostart(this, auto.isChecked());
