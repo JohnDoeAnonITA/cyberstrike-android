@@ -276,20 +276,21 @@ public class CsClient {
         request("PUT", "/auth/" + providerID, b.toString(), 20000);
     }
 
-    /** Aggiunge (o aggiorna) un provider con il suo primo modello. */
+    /** Aggiunge (o aggiorna) un provider con uno o più modelli. */
     public void addProvider(String id, String name, String baseURL,
-                            String modelID, String modelName) throws ApiException {
+                            java.util.List<String[]> models) throws ApiException {
         try {
+            JSONObject map = new JSONObject();
+            for (String[] m : models) {
+                map.put(m[0], new JSONObject().put("id", m[0]).put("name", m[1]));
+            }
             JSONObject options = new JSONObject();
             if (baseURL != null && !baseURL.isEmpty()) options.put("baseURL", baseURL);
-
-            JSONObject model = new JSONObject().put("id", modelID).put("name", modelName);
-            JSONObject models = new JSONObject().put(modelID, model);
 
             JSONObject provider = new JSONObject()
                     .put("name", name)
                     .put("npm", "@ai-sdk/openai-compatible")
-                    .put("models", models)
+                    .put("models", map)
                     .put("options", options);
 
             patchConfig(new JSONObject()
@@ -301,31 +302,16 @@ public class CsClient {
         }
     }
 
-    /** Aggiunge più modelli in un solo PATCH. */
+    /** Aggiunge più modelli a un provider esistente (merge). */
     public void addModels(String providerID, java.util.List<String[]> models) throws ApiException {
         try {
             JSONObject map = new JSONObject();
             for (String[] m : models) {
                 map.put(m[0], new JSONObject().put("id", m[0]).put("name", m[1]));
             }
-            JSONObject provider = new JSONObject().put("models", map);
             patchConfig(new JSONObject()
-                    .put("provider", new JSONObject().put(providerID, provider)));
-        } catch (ApiException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ApiException(0, "payload: " + e.getMessage());
-        }
-    }
-
-    /** Aggiunge (o aggiorna) un modello dentro un provider esistente. */
-    public void addModel(String providerID, String modelID, String name) throws ApiException {
-        try {
-            JSONObject model = new JSONObject().put("id", modelID).put("name", name);
-            JSONObject provider = new JSONObject()
-                    .put("models", new JSONObject().put(modelID, model));
-            patchConfig(new JSONObject()
-                    .put("provider", new JSONObject().put(providerID, provider)));
+                    .put("provider", new JSONObject().put(providerID,
+                            new JSONObject().put("models", map))));
         } catch (ApiException e) {
             throw e;
         } catch (Exception e) {

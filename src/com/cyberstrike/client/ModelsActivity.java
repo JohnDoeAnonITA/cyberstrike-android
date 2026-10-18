@@ -11,6 +11,7 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.BaseAdapter;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ListView;
@@ -516,7 +517,7 @@ public class ModelsActivity extends Activity {
     }
 
     private void addProviderDialog() {
-        LinearLayout box = new LinearLayout(this);
+        final LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
         int p = Ui.dp(this, 20);
         box.setPadding(p, p, p, p);
@@ -526,19 +527,24 @@ public class ModelsActivity extends Activity {
         final EditText url = field("baseURL (https://…/v1)");
         final EditText key = field("API key (opzionale)");
         key.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
-        final EditText mid = field("id modello (es. anthropic/claude-sonnet-4)");
-        final EditText mname = field("nome modello");
+        final EditText modelsText = fieldModels();
 
         box.addView(id);
         box.addView(name);
         box.addView(url);
         box.addView(key);
-        box.addView(mid);
-        box.addView(mname);
+        box.addView(modelsText);
 
         final Button load = new Button(this);
-        load.setText("Carica modelli da baseURL");
+        load.setText("Scegli modelli dalla lista (multipli)");
         box.addView(load);
+
+        final Button create = new Button(this);
+        create.setText("Crea provider");
+        box.addView(create);
+
+        final AlertDialog[] holder = new AlertDialog[1];
+
         load.setOnClickListener(v -> {
             String b = url.getText().toString().trim();
             String k = key.getText().toString().trim();
@@ -546,72 +552,70 @@ public class ModelsActivity extends Activity {
                 Ui.toast(this, "Inserisci prima il baseURL");
                 return;
             }
-            fetchModels(load, b, k, picked -> {
-                mid.setText(picked[0]);
-                mname.setText(picked[1]);
+            fetchModelsMulti(load, b, k, selected -> fillModels(modelsText, selected));
+        });
+
+        create.setOnClickListener(v -> {
+            String pid = id.getText().toString().trim();
+            String pname = name.getText().toString().trim();
+            String base = url.getText().toString().trim();
+            String apiKey = key.getText().toString().trim();
+            List<String[]> models = parseModels(modelsText.getText().toString());
+
+            if (!pid.matches("[A-Za-z0-9._-]{1,40}")) {
+                Ui.toast(this, "id non valido (lettere, numeri, . _ -)");
+                return;
+            }
+            if (!base.startsWith("http")) {
+                Ui.toast(this, "baseURL deve iniziare con http");
+                return;
+            }
+            if (models.isEmpty()) {
+                Ui.toast(this, "Aggiungi almeno un modello: una riga per modello");
+                return;
+            }
+            if (pname.isEmpty()) pname = pid;
+
+            final String fpid = pid, fpname = pname, fbase = base, fkey = apiKey;
+            final List<String[]> fmodels = models;
+
+            io.execute(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        api.addProvider(fpid, fpname, fbase, fmodels);
+                        if (!fkey.isEmpty()) api.setAuth(fpid, fkey);
+                        Diag.add("models", "provider " + fpid + " con " + fmodels.size() + " modelli");
+                        ui.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                expanded.add(fpid);
+                                if (holder[0] != null) holder[0].dismiss();
+                                Ui.toast(ModelsActivity.this, "Provider aggiunto");
+                                load();
+                            }
+                        });
+                    } catch (final Exception e) {
+                        ui.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                Ui.toast(ModelsActivity.this, e.getMessage());
+                            }
+                        });
+                    }
+                }
             });
         });
 
         ScrollView sc = new ScrollView(this);
         sc.addView(box);
 
-        new AlertDialog.Builder(this)
+        holder[0] = new AlertDialog.Builder(this)
                 .setTitle("Nuovo provider")
                 .setView(sc)
-                .setPositiveButton("Aggiungi", (d, w) -> {
-                    String pid = id.getText().toString().trim();
-                    String pname = name.getText().toString().trim();
-                    String base = url.getText().toString().trim();
-                    String apiKey = key.getText().toString().trim();
-                    String modelID = mid.getText().toString().trim();
-                    String modelName = mname.getText().toString().trim();
-
-                    if (!pid.matches("[A-Za-z0-9._-]{1,40}")) {
-                        Ui.toast(this, "id non valido (lettere, numeri, . _ -)");
-                        return;
-                    }
-                    if (!base.startsWith("http")) {
-                        Ui.toast(this, "baseURL deve iniziare con http");
-                        return;
-                    }
-                    if (modelID.isEmpty()) {
-                        Ui.toast(this, "serve almeno un modello");
-                        return;
-                    }
-                    if (pname.isEmpty()) pname = pid;
-                    if (modelName.isEmpty()) modelName = modelID;
-
-                    final String fpid = pid, fpname = pname, fbase = base, fkey = apiKey;
-                    final String fmid = modelID, fmname = modelName;
-
-                    io.execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            try {
-                                api.addProvider(fpid, fpname, fbase, fmid, fmname);
-                                if (!fkey.isEmpty()) api.setAuth(fpid, fkey);
-                                Diag.add("models", "provider aggiunto " + fpid);
-                                ui.post(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        expanded.add(fpid);
-                                        Ui.toast(ModelsActivity.this, "Provider aggiunto");
-                                        load();
-                                    }
-                                });
-                            } catch (final Exception e) {
-                                ui.post(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        Ui.toast(ModelsActivity.this, e.getMessage());
-                                    }
-                                });
-                            }
-                        }
-                    });
-                })
                 .setNegativeButton("Annulla", null)
-                .show();
+                .create();
+        holder[0].show();
     }
 
     private void addModelDialog() {
@@ -629,23 +633,21 @@ public class ModelsActivity extends Activity {
         for (String[] p : activeProviders) names.add(p[1] + " (" + p[0] + ")");
         sp.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, names));
 
-        final EditText lines = field("un modello per riga:  id   oppure   id = nome");
-        lines.setSingleLine(false);
-        lines.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
-        lines.setMinLines(4);
-        lines.setMaxLines(8);
+        final EditText modelsText = fieldModels();
         final EditText key = field("API key (solo per caricare la lista)");
         key.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
 
         box.addView(sp);
-        box.addView(lines);
+        box.addView(modelsText);
         box.addView(key);
 
         final Button load = new Button(this);
         load.setText("Scegli modelli dalla lista (multipli)");
         box.addView(load);
 
-        final AlertDialog[] holder = new AlertDialog[1];
+        final Button add = new Button(this);
+        add.setText("Aggiungi modelli");
+        box.addView(add);
 
         load.setOnClickListener(v -> {
             String pid = activeProviders.get(sp.getSelectedItemPosition())[0];
@@ -655,25 +657,101 @@ public class ModelsActivity extends Activity {
                 return;
             }
             fetchModelsMulti(load, base, key.getText().toString().trim(),
-                    selected -> addModelsAndDismiss(pid, selected, holder[0]));
+                    selected -> fillModels(modelsText, selected));
         });
 
-        AlertDialog dialog = new AlertDialog.Builder(this)
+        add.setOnClickListener(v -> {
+            String pid = activeProviders.get(sp.getSelectedItemPosition())[0];
+            List<String[]> models = parseModels(modelsText.getText().toString());
+            if (models.isEmpty()) {
+                Ui.toast(this, "Scrivi almeno un modello: una riga per modello");
+                return;
+            }
+            final String fpid = pid;
+            final List<String[]> fmodels = models;
+            io.execute(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        api.addModels(fpid, fmodels);
+                        Diag.add("models", fmodels.size() + " modelli aggiunti a " + fpid);
+                        ui.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                expanded.add(fpid);
+                                modelsText.setText("");
+                                Ui.toast(ModelsActivity.this, fmodels.size() == 1
+                                        ? "Modello aggiunto"
+                                        : fmodels.size() + " modelli aggiunti");
+                                load();
+                            }
+                        });
+                    } catch (final Exception e) {
+                        ui.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                Ui.toast(ModelsActivity.this, e.getMessage());
+                            }
+                        });
+                    }
+                }
+            });
+        });
+
+        new AlertDialog.Builder(this)
                 .setTitle("Nuovo modello")
                 .setView(box)
-                .setPositiveButton("Aggiungi", (d, w) -> {
-                    String pid = activeProviders.get(sp.getSelectedItemPosition())[0];
-                    List<String[]> models = parseModels(lines.getText().toString());
-                    if (models.isEmpty()) {
-                        Ui.toast(this, "Scrivi almeno un modello (una riga per modello)");
-                        return;
-                    }
-                    addModelsAndDismiss(pid, models, null);
-                })
-                .setNegativeButton("Annulla", null)
-                .create();
-        holder[0] = dialog;
-        dialog.show();
+                .setPositiveButton("Chiudi", null)
+                .show();
+    }
+
+    // ------------------------------------------------------- modelli: helper
+
+    private EditText fieldModels() {
+        EditText e = field("modelli: uno per riga —  id   oppure   id = nome");
+        e.setSingleLine(false);
+        e.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+        e.setMinLines(3);
+        e.setMaxLines(6);
+        return e;
+    }
+
+    private static void fillModels(EditText target, List<String[]> models) {
+        if (models == null || models.isEmpty()) return;
+        StringBuilder sb = new StringBuilder();
+        for (String[] m : models) {
+            sb.append(m[0]);
+            if (!m[1].equals(m[0])) sb.append(" = ").append(m[1]);
+            sb.append('\n');
+        }
+        String add = sb.toString().trim();
+        String cur = target.getText().toString().trim();
+        if (cur.isEmpty()) {
+            target.setText(add);
+        } else if (!cur.contains(add.split("\n")[0])) {
+            target.setText(cur + "\n" + add);
+        }
+    }
+
+    /** "id" oppure "id = nome" per riga; righe vuote e #commenti ignorati. */
+    private static List<String[]> parseModels(String text) {
+        List<String[]> out = new ArrayList<>();
+        if (text == null) return out;
+        for (String raw : text.split("\r?\n")) {
+            String line = raw.trim();
+            if (line.isEmpty() || line.startsWith("#")) continue;
+            String id = line, name = line;
+            int sep = line.indexOf('=');
+            if (sep < 0) sep = line.indexOf('|');
+            if (sep > 0) {
+                id = line.substring(0, sep).trim();
+                name = line.substring(sep + 1).trim();
+            }
+            if (id.isEmpty()) continue;
+            if (name.isEmpty()) name = id;
+            out.add(new String[]{id, name});
+        }
+        return out;
     }
 
     private interface MultiPick {
@@ -712,10 +790,10 @@ public class ModelsActivity extends Activity {
         });
     }
 
-    /** Lista con filtro e checkbox: si possono aggiungere più modelli in un colpo. */
+    /** Lista con filtro e checkbox (una CheckBox per riga: selezione multipla reale). */
     private void showModelMultiPicker(final List<String[]> models, final MultiPick cb) {
-        final List<String[]> filtered = new ArrayList<>(models);
         final Set<String> checked = new HashSet<>();
+        final List<String[]> filtered = new ArrayList<>(models);
 
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
@@ -726,36 +804,10 @@ public class ModelsActivity extends Activity {
         box.addView(filter);
 
         final ListView list = new ListView(this);
-        final ArrayAdapter<String> ad = new ArrayAdapter<>(this,
-                android.R.layout.simple_list_item_multiple_choice, new ArrayList<String>());
+        final CheckAdapter ad = new CheckAdapter(filtered, checked);
         list.setAdapter(ad);
-        list.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE);
         box.addView(list, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 380)));
-
-        final Runnable refresh = new Runnable() {
-            @Override
-            public void run() {
-                ad.clear();
-                for (String[] m : filtered) {
-                    ad.add(m[1].equals(m[0]) ? m[0] : (m[1] + "  ·  " + m[0]));
-                }
-                ad.notifyDataSetChanged();
-                for (int i = 0; i < filtered.size(); i++) {
-                    list.setItemChecked(i, checked.contains(filtered.get(i)[0]));
-                }
-            }
-        };
-
-        list.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int pos, long id) {
-                if (pos < 0 || pos >= filtered.size()) return;
-                String mid = filtered.get(pos)[0];
-                if (checked.contains(mid)) checked.remove(mid);
-                else checked.add(mid);
-            }
-        });
+                ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 360)));
 
         filter.addTextChangedListener(new android.text.TextWatcher() {
             public void beforeTextChanged(CharSequence s, int a, int b, int c) {
@@ -771,19 +823,17 @@ public class ModelsActivity extends Activity {
                         filtered.add(m);
                     }
                 }
-                refresh.run();
+                ad.notifyDataSetChanged();
             }
 
             public void afterTextChanged(android.text.Editable s) {
             }
         });
 
-        refresh.run();
-
         new AlertDialog.Builder(this)
                 .setTitle("Modelli disponibili (" + models.size() + ")")
                 .setView(box)
-                .setPositiveButton("Aggiungi", (d, w) -> {
+                .setPositiveButton("Usa selezionati", (d, w) -> {
                     List<String[]> sel = new ArrayList<>();
                     for (String[] m : models) {
                         if (checked.contains(m[0])) sel.add(m);
@@ -794,60 +844,44 @@ public class ModelsActivity extends Activity {
                 .show();
     }
 
-    /** "id" oppure "id = nome" per riga; righe vuote e #commenti ignorati. */
-    private static List<String[]> parseModels(String text) {
-        List<String[]> out = new ArrayList<>();
-        if (text == null) return out;
-        for (String raw : text.split("\r?\n")) {
-            String line = raw.trim();
-            if (line.isEmpty() || line.startsWith("#")) continue;
-            String id = line, name = line;
-            int sep = line.indexOf('=');
-            if (sep < 0) sep = line.indexOf('|');
-            if (sep > 0) {
-                id = line.substring(0, sep).trim();
-                name = line.substring(sep + 1).trim();
-            }
-            if (id.isEmpty()) continue;
-            if (name.isEmpty()) name = id;
-            out.add(new String[]{id, name});
-        }
-        return out;
-    }
+    private class CheckAdapter extends BaseAdapter {
+        private final List<String[]> items;
+        private final Set<String> checked;
 
-    private void addModelsAndDismiss(final String pid, final List<String[]> selected,
-                                     final AlertDialog parent) {
-        if (selected == null || selected.isEmpty()) {
-            Ui.toast(this, "Nessun modello selezionato");
-            return;
+        CheckAdapter(List<String[]> items, Set<String> checked) {
+            this.items = items;
+            this.checked = checked;
         }
-        io.execute(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    api.addModels(pid, selected);
-                    Diag.add("models", selected.size() + " modelli aggiunti a " + pid);
-                    ui.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            expanded.add(pid);
-                            if (parent != null) parent.dismiss();
-                            Ui.toast(ModelsActivity.this, selected.size() == 1
-                                    ? "Modello aggiunto"
-                                    : selected.size() + " modelli aggiunti");
-                            load();
-                        }
-                    });
-                } catch (final Exception e) {
-                    ui.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            Ui.toast(ModelsActivity.this, e.getMessage());
-                        }
-                    });
-                }
-            }
-        });
+
+        public int getCount() {
+            return items.size();
+        }
+
+        public Object getItem(int i) {
+            return items.get(i);
+        }
+
+        public long getItemId(int i) {
+            return i;
+        }
+
+        public View getView(int pos, View cv, ViewGroup parent) {
+            CheckBox cb = (cv instanceof CheckBox) ? (CheckBox) cv
+                    : new CheckBox(ModelsActivity.this);
+            final String[] m = items.get(pos);
+            cb.setText(m[1].equals(m[0]) ? m[0] : (m[1] + "  ·  " + m[0]));
+            cb.setTextColor(0xFFD9F7E6);
+            cb.setTextSize(13f);
+            cb.setPadding(Ui.dp(ModelsActivity.this, 8), Ui.dp(ModelsActivity.this, 4),
+                    Ui.dp(ModelsActivity.this, 8), Ui.dp(ModelsActivity.this, 4));
+            cb.setOnCheckedChangeListener(null);
+            cb.setChecked(checked.contains(m[0]));
+            cb.setOnCheckedChangeListener((b, isChecked) -> {
+                if (isChecked) checked.add(m[0]);
+                else checked.remove(m[0]);
+            });
+            return cb;
+        }
     }
 
     private static void sleep(long ms) {

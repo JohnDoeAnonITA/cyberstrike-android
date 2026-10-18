@@ -101,9 +101,10 @@ Menu `⋮` → **Impostazioni**:
 `⋮ → Modelli e provider`:
 
 - **scegli** il provider/modello attivo (tap sul modello)
-- **aggiungi provider**: id, nome, baseURL, API key opzionale (`PUT /auth/{id}`), modello scelto da `GET <baseURL>/models` oppure digitato a mano
+- **aggiungi provider**: id, nome, baseURL, API key opzionale (`PUT /auth/{id}`) e **uno o più modelli**
+  (selezione multipla dalla lista di `GET <baseURL>/models`, oppure righe manuali)
 - **aggiungi modelli** a un provider esistente, anche più d'uno:
-  - selezione multipla con filtro dalla lista `GET <baseURL>/models`
+  - selezione multipla con filtro (checkbox per riga) dalla lista `GET <baseURL>/models`
   - inserimento manuale multiriga (`id` oppure `id = nome`, una riga per modello)
 - **disattiva / riattiva** provider (`disabled_providers`, reversibile)
 - **predefinito per provider** (★): usato dall'auto-selezione quando il modello attivo non è impostato
