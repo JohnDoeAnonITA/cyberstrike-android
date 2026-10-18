@@ -163,7 +163,17 @@ public class MainActivity extends Activity {
                 });
 
                 if (!Bootstrap.run(MainActivity.this)) {
-                    done(false);
+                    ui.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            booting = false;
+                            onOffline();
+                            showSetupHint("Termux ha rifiutato il comando. "
+                                    + "Controlla allow-external-apps = true in "
+                                    + "~/.termux/termux.properties e rilancia "
+                                    + "termux-reload-settings.");
+                        }
+                    });
                     return;
                 }
 
@@ -182,6 +192,19 @@ public class MainActivity extends Activity {
                             public void run() {
                                 setStatus("Installazione… " + (secs / 60) + "m " + (secs % 60) + "s",
                                         false);
+                            }
+                        });
+                    }
+                    // dopo 5 minuti senza segnali: suggerimento (una sola volta)
+                    if (i == 100) {
+                        ui.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                showSetupHint("Nessuna risposta dopo 5 minuti.\n\n"
+                                        + "Se è il primo avvio il download può essere lento. "
+                                        + "Altrimenti verifica in Termux:\n"
+                                        + "• allow-external-apps = true\n"
+                                        + "• log: ~/.cyberstrike-setup.log");
                             }
                         });
                     }
@@ -215,6 +238,15 @@ public class MainActivity extends Activity {
                         openUrl("https://f-droid.org/packages/com.termux/"))
                 .setNeutralButton("Apri Termux", (d, w) -> Bootstrap.openTermux(this))
                 .setNegativeButton("Chiudi", null)
+                .show();
+    }
+
+    private void showSetupHint(String msg) {
+        new AlertDialog.Builder(this)
+                .setTitle("Setup CyberStrike")
+                .setMessage(msg)
+                .setPositiveButton("Apri Termux", (d, w) -> Bootstrap.openTermux(this))
+                .setNegativeButton("OK", null)
                 .show();
     }
 
