@@ -11,8 +11,16 @@ BT="${2:-${BUILD_TOOLS:-}}"
 : "${AJ:?serve android.jar (arg1 o ANDROID_JAR)}"
 : "${BT:?serve la cartella build-tools (arg2 o BUILD_TOOLS)}"
 
-VERSION_CODE="${VERSION_CODE:-1}"
 VERSION_NAME="${VERSION_NAME:-0.1.0}"
+# Se VERSION_CODE non è passato, derivalo dalla versione (semver):
+#   0.1.24 -> 124, 0.2.0 -> 200, 1.0.0 -> 10000
+# Così build locali e release CI restano monotone e confrontabili.
+if [ -z "${VERSION_CODE:-}" ]; then
+  _ma="${VERSION_NAME%%.*}"; _rest="${VERSION_NAME#*.}"
+  _mi="${_rest%%.*}"; _pa="${_rest#*.}"
+  _ma="${_ma%%[^0-9]*}"; _mi="${_mi%%[^0-9]*}"; _pa="${_pa%%[^0-9]*}"
+  VERSION_CODE=$((10#${_ma:-0} * 10000 + 10#${_mi:-0} * 100 + 10#${_pa:-0}))
+fi
 
 # Preferisce il binario dei build-tools, ma solo se è eseguibile su questa
 # architettura (i build-tools ufficiali sono x86_64: su arm64 si usano quelli

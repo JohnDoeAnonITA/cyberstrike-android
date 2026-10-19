@@ -32,11 +32,15 @@ jobs:
       - name: Versione
         run: |
           if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
-            echo "VERSION_NAME=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_ENV"
+            V="${GITHUB_REF#refs/tags/v}"
+            echo "VERSION_NAME=$V" >> "$GITHUB_ENV"
+            IFS='.' read -r MA MI PA <<< "$V"
+            PA="${PA:-0}"
+            echo "VERSION_CODE=$((10#$MA * 10000 + 10#$MI * 100 + 10#$PA))" >> "$GITHUB_ENV"
           else
             echo "VERSION_NAME=1.0.${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
+            echo "VERSION_CODE=${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
           fi
-          echo "VERSION_CODE=${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
 
       - name: Keystore
         env:
