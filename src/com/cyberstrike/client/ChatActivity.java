@@ -18,6 +18,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.AbsListView;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -61,6 +62,7 @@ public class ChatActivity extends Activity {
     private EditText input;
     private TextView stop;
     private TextView sub;
+    private TextView scrollBottom;
 
     private LinearLayout chips;
     private View chipsBar;
@@ -106,6 +108,24 @@ public class ChatActivity extends Activity {
             }
         });
         list.setAdapter(adapter);
+
+        scrollBottom = (TextView) findViewById(R.id.scroll_bottom);
+        scrollBottom.setOnClickListener(v -> {
+            if (adapter.getCount() > 0) {
+                list.smoothScrollToPosition(adapter.getCount() - 1);
+            }
+            scrollBottom.setVisibility(View.GONE);
+        });
+        list.setOnScrollListener(new AbsListView.OnScrollListener() {
+            @Override
+            public void onScrollStateChanged(AbsListView view, int scrollState) {
+            }
+
+            @Override
+            public void onScroll(AbsListView view, int first, int visible, int total) {
+                updateScrollButton();
+            }
+        });
 
         chips = (LinearLayout) findViewById(R.id.chips);
         chipsBar = findViewById(R.id.chips_bar);
@@ -155,6 +175,44 @@ public class ChatActivity extends Activity {
                         }
                     });
                 }
+            }
+        });
+        loadQuestions();
+    }
+
+    /**
+     * Recupera le domande già pendenti sul server (GET /question) e le mostra.
+     * Necessario perché il server non riemette "question.asked" via SSE quando
+     * l'app si collega: senza questo polling una domanda creata prima della
+     * connessione andrebbe persa.
+     */
+    private void loadQuestions() {
+        io.execute(new Runnable() {
+            @Override
+            public void run() {
+                final JSONArray arr;
+                try {
+                    arr = api.questions(directory);
+                } catch (Exception e) {
+                    return;
+                }
+                ui.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (arr == null) return;
+                        for (int i = 0; i < arr.length(); i++) {
+                            JSONObject q = arr.optJSONObject(i);
+                            if (q == null) continue;
+                            String sid = q.optString("sessionID", "");
+                            if (!sid.isEmpty() && !sid.equals(sessionID)) continue;
+                            String id = q.optString("id", "");
+                            if (id.isEmpty()) continue;
+                            if (askedQuestions.add(id)) {
+                                askQuestion(q, 0, new JSONArray());
+                            }
+                        }
+                    }
+                });
             }
         });
     }
@@ -251,7 +309,7 @@ public class ChatActivity extends Activity {
                     : "error".equals(status) ? "✖" : "•";
             String first = "question".equals(tool) ? questionSummary(st) : firstLine(st);
             r.text = icon + " " + tool + "  ·  " + status
-                    + (first.isEmpty() ? "" : "\n$ " + Ui.ellipsize(first, 160));
+                    + (first.isEmpty() ? "" : "\n$ " + first);
             r.detail = toolDetail(p);
             return r;
         }
@@ -708,6 +766,7 @@ public class ChatActivity extends Activity {
                 uiPending = false;
                 adapter.notifyDataSetChanged();
                 scrollToEndIfNear();
+                updateScrollButton();
             }
         }, 60);
     }
@@ -728,8 +787,22 @@ public class ChatActivity extends Activity {
                 if (adapter.getCount() > 0) {
                     list.setSelection(adapter.getCount() - 1);
                 }
+                updateScrollButton();
             }
         });
+    }
+
+    /** Mostra il pulsante "torna in fondo" solo quando la lista non è in fondo. */
+    private void updateScrollButton() {
+        if (scrollBottom == null) return;
+        int total = adapter.getCount();
+        if (total == 0) {
+            scrollBottom.setVisibility(View.GONE);
+            return;
+        }
+        int last = list.getLastVisiblePosition();
+        boolean atBottom = last >= total - 1;
+        scrollBottom.setVisibility(atBottom ? View.GONE : View.VISIBLE);
     }
 
     // ----------------------------------------------------------------- eventi

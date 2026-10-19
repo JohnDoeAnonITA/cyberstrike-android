@@ -104,20 +104,41 @@
                 android:background="?android:attr/selectableItemBackgroundBorderless" />
         </LinearLayout>
 
-        <ListView
-            android:id="@+id/list"
+        <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1"
-            android:divider="@null"
-            android:dividerHeight="0dp"
-            android:clipToPadding="false"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
-            android:paddingTop="8dp"
-            android:paddingBottom="8dp"
-            android:scrollbars="none"
-            android:transcriptMode="normal" />
+            android:layout_weight="1">
+
+            <ListView
+                android:id="@+id/list"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:divider="@null"
+                android:dividerHeight="0dp"
+                android:clipToPadding="false"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp"
+                android:scrollbars="none"
+                android:transcriptMode="normal" />
+
+            <TextView
+                android:id="@+id/scroll_bottom"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                android:layout_gravity="bottom|end"
+                android:layout_marginEnd="16dp"
+                android:layout_marginBottom="12dp"
+                android:gravity="center"
+                android:text="↓"
+                android:textColor="#04130A"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:background="@drawable/bg_fab"
+                android:elevation="4dp"
+                android:visibility="gone" />
+        </FrameLayout>
 
         <HorizontalScrollView
             android:id="@+id/chips_bar"
