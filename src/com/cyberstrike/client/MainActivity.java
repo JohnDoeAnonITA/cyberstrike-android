@@ -577,12 +577,30 @@ public class MainActivity extends Activity {
             showTermuxMissing();
             return;
         }
-        if (api.healthy()) {
-            Ui.toast(this, "Server già attivo");
-            return;
-        }
         Prefs.setAutostart(this, true);
-        boot();
+        // Controllo salute fuori dal thread UI (api.healthy() è una chiamata di rete).
+        io.execute(new Runnable() {
+            @Override
+            public void run() {
+                final boolean ok = api.healthy();
+                ui.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (ok) {
+                            // Server attivo: il bootstrap è idempotente e (re)installa
+                            // il watchdog di riavvio senza toccare il server in esecuzione.
+                            if (Bootstrap.run(MainActivity.this)) {
+                                Ui.toast(MainActivity.this, "Server attivo — watchdog aggiornato");
+                            } else {
+                                Ui.toast(MainActivity.this, "Server attivo (watchdog non aggiornato)");
+                            }
+                        } else {
+                            boot();
+                        }
+                    }
+                });
+            }
+        });
     }
 
     // ------------------------------------------------------------------ menu
