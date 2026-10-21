@@ -41,6 +41,14 @@ fail() {
   exit 1
 }
 
+# --- 1..4. prepara l'ambiente SOLO se non è già stato fatto ----------------
+# Dopo il primo setup con successo esiste "$DONE": saltiamo installazione e
+# verifiche pesanti (che avviano proot) ad ogni avvio, per non generare troppi
+# processi figli (Android 12+ li killa con SIGKILL — "phantom process killer").
+if [ -f "$DONE" ]; then
+  echo "-- ambiente già preparato (salto installazione/verifiche)"
+else
+
 # --- 1. proot-distro -------------------------------------------------------
 if ! command -v proot-distro >/dev/null 2>&1; then
   echo "-- installo proot-distro"
@@ -76,7 +84,8 @@ curl -fsSL https://cyberstrike.io/install.sh -o /tmp/cs-install.sh
 bash /tmp/cs-install.sh
 rm -f /tmp/cs-install.sh
 test -x /root/.cyberstrike/bin/cyberstrike
-' || fail "installer CyberStrike"
+  ' || fail "installer CyberStrike"
+fi
 fi
 
 # --- 5. avvio server -------------------------------------------------------
@@ -104,44 +113,54 @@ if [ "${CS_RESTART:-0}" = "1" ]; then
   fi
 fi
 
-# --- 5b. watchdog: riavvio automatico del server se muore ------------------
-# Il server (proot + Bun) può schiantarsi (es. errore futex sotto pressione).
-# Un watchdog in background controlla la porta e riavvia il server se è giù.
-WATCH="$HOME/.cs-watchdog.sh"
-PIDF="$HOME/.cs-watchdog.pid"
+# --- 6. supervisor: UN solo proot con loop di riavvio interno --------------
+# I riavvii del server avvengono DENTRO lo stesso proot: non si creano nuovi
+# proot ad ogni crash (evita l'accumulo di processi figli → SIGKILL di Android).
+WATCH="$HOME/.cs-supervisor.sh"
+PIDF="$HOME/.cs-supervisor.pid"
 
-# (ri)genera lo script watchdog con porta e password correnti
 cat > "$WATCH" <<WEOF
 #!/data/data/com.termux/files/usr/bin/bash
 export PATH="$PREFIX/bin:\$PATH"
 PORT="$PORT"
 PW="$PW"
 LOG="\$HOME/.cyberstrike-server.log"
-PF="\$HOME/.cs-watchdog.pid"
+PF="\$HOME/.cs-supervisor.pid"
 echo \$\$ > "\$PF"
 command -v termux-wake-lock >/dev/null 2>&1 && termux-wake-lock
+delay=5
 while true; do
   if (exec 3<>"/dev/tcp/127.0.0.1/\$PORT") >/dev/null 2>&1; then
     exec 3<&- 3>&- 2>/dev/null
-    sleep 5
+    sleep 10
     continue
   fi
-  echo "=== \$(date '+%F %T') watchdog: server giù, riavvio ===" >> "\$LOG"
-  proot-distro login debian -- env CYBERSTRIKE_SERVER_PASSWORD="\$PW" \\
-    /root/.cyberstrike/bin/cyberstrike serve --port "\$PORT" --hostname 127.0.0.1 \\
+  echo "=== \$(date '+%F %T') supervisor: server giù, avvio/riavvio (attesa \${delay}s) ===" >> "\$LOG"
+  start=\$(date +%s)
+  proot-distro login debian -- env CYBERSTRIKE_SERVER_PASSWORD="\$PW" CS_PORT="\$PORT" \\
+    bash -c 'while true; do /root/.cyberstrike/bin/cyberstrike serve --port "\$CS_PORT" --hostname 127.0.0.1; sleep 5; done' \\
     >> "\$LOG" 2>&1
-  sleep 3
+  ran=\$(( \$(date +%s) - start ))
+  if [ "\$ran" -ge 60 ]; then delay=5; else
+    delay=\$(( delay * 2 )); [ "\$delay" -gt 180 ] && delay=180
+  fi
+  sleep "\$delay"
 done
 WEOF
 chmod +x "$WATCH"
 
-# avvia il watchdog se non è già in esecuzione
+# avvia il supervisor se non è già in esecuzione (setsid: sopravvive alla
+# chiusura della sessione RUN_COMMAND)
 if [ -f "$PIDF" ] && kill -0 "$(cat "$PIDF" 2>/dev/null)" 2>/dev/null; then
-  echo "-- watchdog già attivo (pid $(cat "$PIDF"))"
+  echo "-- supervisor già attivo (pid $(cat "$PIDF"))"
 else
-  nohup "$WATCH" >/dev/null 2>&1 &
+  if command -v setsid >/dev/null 2>&1; then
+    setsid "$WATCH" >/dev/null 2>&1 < /dev/null &
+  else
+    nohup "$WATCH" >/dev/null 2>&1 &
+  fi
   disown 2>/dev/null || true
-  echo "-- watchdog avviato"
+  echo "-- supervisor avviato"
 fi
 
 # attende che il server sia raggiungibile
