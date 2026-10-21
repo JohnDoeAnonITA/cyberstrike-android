@@ -31,8 +31,10 @@ import com.cyberstrike.client.api.CsClient;
 import com.cyberstrike.client.api.EventStream;
 import com.cyberstrike.client.ui.ModelTreePicker;
 import com.cyberstrike.client.ui.MsgAdapter;
+import com.cyberstrike.client.util.Bootstrap;
 import com.cyberstrike.client.util.Diag;
 import com.cyberstrike.client.util.Prefs;
+import com.cyberstrike.client.util.ServerStarter;
 import com.cyberstrike.client.util.Ui;
 
 import org.json.JSONArray;
@@ -77,6 +79,7 @@ public class ChatActivity extends Activity {
     private volatile boolean running;
     private volatile boolean loadedOnce;
     private boolean uiPending;
+    private long lastBootstrap;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -731,13 +734,42 @@ public class ChatActivity extends Activity {
         });
     }
 
+    /**
+     * Se il server locale è caduto (SSE disconnesso), prova a riavviarlo tramite
+     * il bootstrap (idempotente, installa anche il watchdog). Debounce 60s per
+     * non martellare Termux durante i tentativi di riconnessione.
+     */
+    private void maybeRestartServer() {
+        if (!Prefs.autostart(this)) return;
+        if (!Bootstrap.isLocal(Prefs.base(this))) return;
+        if (!ServerStarter.installed(this)) return;
+        long now = System.currentTimeMillis();
+        if (now - lastBootstrap < 60000L) return;
+        lastBootstrap = now;
+        Diag.add("sse", "server giù: tentativo di riavvio");
+        Bootstrap.run(this);
+    }
+
     private void abort() {
+        Ui.toast(this, "Interruzione…");
         io.execute(new Runnable() {
             @Override
             public void run() {
                 try {
                     api.abort(sessionID, directory);
-                } catch (Exception ignored) {
+                    ui.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            setRunning(false);
+                        }
+                    });
+                } catch (final Exception e) {
+                    ui.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            Ui.toast(ChatActivity.this, "Ferma: " + e.getMessage());
+                        }
+                    });
                 }
             }
         });
@@ -818,7 +850,11 @@ public class ChatActivity extends Activity {
 
                     @Override
                     public void onConnection(boolean connected) {
-                        if (connected && loadedOnce) load();
+                        if (connected) {
+                            if (loadedOnce) load();
+                        } else {
+                            maybeRestartServer();
+                        }
                     }
                 });
         events.start();

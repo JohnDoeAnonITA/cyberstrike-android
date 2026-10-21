@@ -104,24 +104,55 @@ if [ "${CS_RESTART:-0}" = "1" ]; then
   fi
 fi
 
-if port_open; then
-  echo "-- server già in ascolto su :$PORT"
-else
-  echo "-- avvio cyberstrike serve su :$PORT"
-  nohup proot-distro login debian -- env CYBERSTRIKE_SERVER_PASSWORD="$PW" \
-    /root/.cyberstrike/bin/cyberstrike serve --port "$PORT" --hostname 127.0.0.1 \
-    >>"$HOME/.cyberstrike-server.log" 2>&1 &
-  disown 2>/dev/null || true
+# --- 5b. watchdog: riavvio automatico del server se muore ------------------
+# Il server (proot + Bun) può schiantarsi (es. errore futex sotto pressione).
+# Un watchdog in background controlla la porta e riavvia il server se è giù.
+WATCH="$HOME/.cs-watchdog.sh"
+PIDF="$HOME/.cs-watchdog.pid"
 
-  for i in $(seq 1 60); do
-    port_open && break
-    sleep 1
-  done
-  if ! port_open; then
-    echo "-- ultime righe del server:"
-    tail -5 "$HOME/.cyberstrike-server.log"
-    fail "il server non risponde su :$PORT"
+# (ri)genera lo script watchdog con porta e password correnti
+cat > "$WATCH" <<WEOF
+#!/data/data/com.termux/files/usr/bin/bash
+export PATH="$PREFIX/bin:\$PATH"
+PORT="$PORT"
+PW="$PW"
+LOG="\$HOME/.cyberstrike-server.log"
+PF="\$HOME/.cs-watchdog.pid"
+echo \$\$ > "\$PF"
+command -v termux-wake-lock >/dev/null 2>&1 && termux-wake-lock
+while true; do
+  if (exec 3<>"/dev/tcp/127.0.0.1/\$PORT") >/dev/null 2>&1; then
+    exec 3<&- 3>&- 2>/dev/null
+    sleep 5
+    continue
   fi
+  echo "=== \$(date '+%F %T') watchdog: server giù, riavvio ===" >> "\$LOG"
+  proot-distro login debian -- env CYBERSTRIKE_SERVER_PASSWORD="\$PW" \\
+    /root/.cyberstrike/bin/cyberstrike serve --port "\$PORT" --hostname 127.0.0.1 \\
+    >> "\$LOG" 2>&1
+  sleep 3
+done
+WEOF
+chmod +x "$WATCH"
+
+# avvia il watchdog se non è già in esecuzione
+if [ -f "$PIDF" ] && kill -0 "$(cat "$PIDF" 2>/dev/null)" 2>/dev/null; then
+  echo "-- watchdog già attivo (pid $(cat "$PIDF"))"
+else
+  nohup "$WATCH" >/dev/null 2>&1 &
+  disown 2>/dev/null || true
+  echo "-- watchdog avviato"
+fi
+
+# attende che il server sia raggiungibile
+for i in $(seq 1 60); do
+  port_open && break
+  sleep 1
+done
+if ! port_open; then
+  echo "-- ultime righe del server:"
+  tail -5 "$HOME/.cyberstrike-server.log"
+  fail "il server non risponde su :$PORT"
 fi
 
 echo "$(date '+%F %T') bootstrap OK"
