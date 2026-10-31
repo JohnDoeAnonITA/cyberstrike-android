@@ -12,6 +12,12 @@ L'interfaccia è in stile **PIP-BOY**: fosforo verde su vetro catodico, scanline
 CRT, font monospace e — in sottofondo — *I Don't Want To Set The World On Fire*
 letta dai file audio del telefono.
 
+<p align="center">
+  <img src="docs/screenshot-intro.jpg" width="31%" alt="Intro: terminale ROBCO con il minigioco di hacking">
+  <img src="docs/screenshot-sessioni.jpg" width="31%" alt="Lista delle sessioni in stile PIP-BOY">
+  <img src="docs/screenshot-chat.jpg" width="31%" alt="Chat con streaming SSE">
+</p>
+
 ```
 ┌────────────────────────────────┐
 │  App CyberStrike (Java)        │
@@ -226,6 +232,7 @@ crash su classi anonime compilate da JDK 21) e genera `cyberstrike-client.apk`.
 ```
 AndroidManifest.xml
 build.sh
+docs/                 # screenshot per il README
 assets/
   bootstrap.sh        # setup Termux + Debian + CyberStrike + supervisor
   fonts/pip.ttf       # Share Tech Mono (OFL 1.1) + OFL.txt
