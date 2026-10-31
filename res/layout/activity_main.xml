@@ -4,28 +4,26 @@
     android:layout_height="match_parent"
     android:background="@color/bg">
 
-    <com.cyberstrike.client.ui.MatrixView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
-
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#C4050806"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:background="@drawable/bg_glow">
 
+        <!-- barra superiore stile PIP-OS -->
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="60dp"
+            android:layout_height="58dp"
+            android:background="@drawable/bg_header"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:paddingStart="16dp"
-            android:paddingEnd="8dp">
+            android:paddingStart="12dp"
+            android:paddingEnd="6dp">
 
             <ImageView
                 android:id="@+id/logo"
-                android:layout_width="46dp"
-                android:layout_height="30dp"
+                android:layout_width="40dp"
+                android:layout_height="28dp"
                 android:layout_marginEnd="10dp"
                 android:adjustViewBounds="true"
                 android:scaleType="fitCenter"
@@ -40,8 +38,8 @@
 
                 <TextView
                     android:id="@+id/title"
-                    style="@style/HeaderText"
-                    android:layout_width="wrap_content"
+                    style="@style/PipHeader"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/app_name" />
 
@@ -50,17 +48,17 @@
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
-                    android:layout_marginTop="2dp">
+                    android:layout_marginTop="3dp">
 
                     <View
                         android:id="@+id/dot"
-                        android:layout_width="8dp"
-                        android:layout_height="8dp"
+                        android:layout_width="7dp"
+                        android:layout_height="7dp"
                         android:background="@drawable/dot_offline" />
 
                     <TextView
                         android:id="@+id/status"
-                        style="@style/SubText"
+                        style="@style/PipSub"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="6dp"
@@ -70,53 +68,65 @@
 
             <TextView
                 android:id="@+id/overflow"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:gravity="center"
+                style="@style/PipButton"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
                 android:text="⋮"
-                android:textColor="@color/text_dim"
-                android:textSize="22sp"
-                android:background="?android:attr/selectableItemBackgroundBorderless" />
+                android:textSize="20sp" />
         </LinearLayout>
 
-        <ListView
-            android:id="@+id/list"
+        <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1"
-            android:divider="@null"
-            android:dividerHeight="0dp"
-            android:clipToPadding="false"
-            android:paddingStart="10dp"
-            android:paddingEnd="10dp"
-            android:paddingTop="4dp"
-            android:paddingBottom="88dp"
-            android:scrollbars="none" />
+            android:layout_weight="1">
 
-        <TextView
-            android:id="@+id/empty"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:padding="32dp"
-            android:text="@string/no_sessions"
-            android:textColor="@color/text_faint"
-            android:textSize="14sp"
-            android:visibility="gone" />
+            <ListView
+                android:id="@+id/list"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:divider="@null"
+                android:dividerHeight="0dp"
+                android:clipToPadding="false"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="92dp"
+                android:scrollbars="none" />
+
+            <TextView
+                android:id="@+id/empty"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:padding="32dp"
+                android:text="@string/no_sessions"
+                android:textColor="@color/text_faint"
+                android:textSize="13sp"
+                android:visibility="gone" />
+        </FrameLayout>
     </LinearLayout>
 
     <TextView
         android:id="@+id/fab"
-        android:layout_width="56dp"
-        android:layout_height="56dp"
+        android:layout_width="54dp"
+        android:layout_height="54dp"
         android:layout_gravity="bottom|end"
-        android:layout_margin="20dp"
+        android:layout_margin="18dp"
         android:background="@drawable/bg_fab"
-        android:elevation="8dp"
+        android:elevation="6dp"
         android:gravity="center"
         android:text="+"
-        android:textColor="#04130A"
-        android:textSize="30sp"
+        android:textColor="@color/on_accent"
+        android:textSize="28sp"
         android:textStyle="bold" />
+
+    <com.cyberstrike.client.ui.BootScreen
+        android:id="@+id/boot"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone" />
+
+    <com.cyberstrike.client.ui.CrtOverlay
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
 </FrameLayout>

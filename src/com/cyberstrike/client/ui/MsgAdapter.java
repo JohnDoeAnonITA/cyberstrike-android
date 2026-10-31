@@ -17,6 +17,7 @@ import android.text.method.LinkMovementMethod;
 import android.widget.TextView;
 
 import com.cyberstrike.client.R;
+import com.cyberstrike.client.util.Fonts;
 import com.cyberstrike.client.util.Markdown;
 
 import java.util.ArrayList;
@@ -119,6 +120,12 @@ public class MsgAdapter extends BaseAdapter {
         LinearLayout stack = (LinearLayout) cv.findViewById(R.id.stack);
         ImageView img = (ImageView) cv.findViewById(R.id.img);
 
+        TextView bullet = (TextView) cv.findViewById(R.id.bullet);
+        if (bullet != null) {
+            boolean show = r.kind != USER && r.kind != REASONING;
+            bullet.setVisibility(show ? View.VISIBLE : View.GONE);
+        }
+
         stack.removeAllViews();
         stack.setOnClickListener(null);
         stack.setBackground(null);
@@ -134,7 +141,7 @@ public class MsgAdapter extends BaseAdapter {
         switch (r.kind) {
             case USER:
                 bubble(stack, R.drawable.bg_bubble_user, Gravity.END, 12, 9);
-                stack.addView(text(r.text, 0xFFD9F7E6, 14f, Typeface.DEFAULT));
+                stack.addView(text(r.text, 0xFF93FFC6, 14f, Fonts.mono(ctx)));
                 break;
 
             case TEXT:
@@ -143,7 +150,7 @@ public class MsgAdapter extends BaseAdapter {
                     if (b.isTable()) {
                         stack.addView(TableView.build(ctx, b.table, b.headered), tableLp());
                     } else {
-                        TextView t = text(b.text, 0xFFD9F7E6, 14f, Typeface.DEFAULT);
+                        TextView t = text(b.text, 0xFF93FFC6, 14f, Fonts.mono(ctx));
                         t.setMovementMethod(LinkMovementMethod.getInstance());
                         stack.addView(t);
                     }
@@ -152,26 +159,26 @@ public class MsgAdapter extends BaseAdapter {
 
             case TOOL:
                 bubble(stack, R.drawable.bg_tool, Gravity.START, 10, 8);
-                stack.addView(text(r.text, 0xFF7FA98F, 12f, Typeface.MONOSPACE));
+                stack.addView(text(r.text, 0xFF46B485, 12f, Fonts.mono(ctx)));
                 stack.setOnClickListener(v -> {
                     if (listener != null) listener.onTool(r);
                 });
                 break;
 
             case REASONING:
-                stack.addView(text(r.text, 0xFF3F5A4A, 12f,
-                        Typeface.create(Typeface.DEFAULT, Typeface.ITALIC)));
+                stack.addView(text(r.text, 0xFF1F6B4E, 12f,
+                        Typeface.create(Fonts.mono(ctx), Typeface.ITALIC)));
                 break;
 
             case ERROR:
                 bubble(stack, R.drawable.bg_tool, Gravity.START, 10, 8);
-                stack.addView(text(r.text, 0xFFFF3B4E, 13f, Typeface.MONOSPACE));
+                stack.addView(text(r.text, 0xFFFF6A3D, 13f, Fonts.mono(ctx)));
                 break;
 
             case IMAGE:
                 bubble(stack, R.drawable.bg_bubble_assistant, Gravity.START, 12, 9);
                 stack.addView(text(r.name.isEmpty() ? "immagine" : r.name,
-                        0xFF6E8F7C, 11f, Typeface.DEFAULT));
+                        0xFF46B485, 11f, Fonts.mono(ctx)));
                 if (img != null && r.url != null && !r.url.isEmpty()) {
                     img.setVisibility(View.VISIBLE);
                     bindImage(img, r.url);
@@ -182,11 +189,11 @@ public class MsgAdapter extends BaseAdapter {
                 bubble(stack, R.drawable.bg_tool, Gravity.START, 10, 8);
                 stack.addView(text("\uD83D\uDCCE " + (r.name.isEmpty() ? "file" : r.name)
                                 + (r.mime.isEmpty() ? "" : "\n" + r.mime),
-                        0xFF7FA98F, 12f, Typeface.MONOSPACE));
+                        0xFF46B485, 12f, Fonts.mono(ctx)));
                 break;
 
             default:
-                stack.addView(text(r.text, 0xFF3F5A4A, 12f, Typeface.DEFAULT));
+                stack.addView(text(r.text, 0xFF1F6B4E, 12f, Typeface.DEFAULT));
                 break;
         }
         return cv;

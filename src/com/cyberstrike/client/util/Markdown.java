@@ -26,12 +26,12 @@ import java.util.regex.Pattern;
  */
 public final class Markdown {
 
-    private static final int C_CODE_BG = 0xFF0E1A13;
-    private static final int C_CODE_FG = 0xFF9FE8C0;
-    private static final int C_LINK = 0xFF00E676;
-    private static final int C_DIM = 0xFF6E8F7C;
-    private static final int C_HEAD = 0xFF00E676;
-    private static final int C_TABLE = 0xFFB8D9C6;
+    private static final int C_CODE_BG = 0xFF07211A;
+    private static final int C_CODE_FG = 0xFF93FFC6;
+    private static final int C_LINK = 0xFF3CFF8F;
+    private static final int C_DIM = 0xFF46B485;
+    private static final int C_HEAD = 0xFF3CFF8F;
+    private static final int C_TABLE = 0xFFB9FFD8;
 
     private static final Pattern UL = Pattern.compile("^([-*+])\\s+(.*)$");
     private static final Pattern OL = Pattern.compile("^(\\d+[.)])\\s+(.*)$");

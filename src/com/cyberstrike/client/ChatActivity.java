@@ -559,7 +559,7 @@ public class ChatActivity extends Activity {
         TextView name = new TextView(this);
         name.setText(att[1]);
         name.setTextSize(12f);
-        name.setTextColor(0xFFD9F7E6);
+        name.setTextColor(0xFF93FFC6);
         name.setMaxWidth(Ui.dp(this, 150));
         name.setSingleLine(true);
         name.setEllipsize(android.text.TextUtils.TruncateAt.END);
@@ -567,7 +567,7 @@ public class ChatActivity extends Activity {
         TextView del = new TextView(this);
         del.setText("✕");
         del.setTextSize(13f);
-        del.setTextColor(0xFF6E8F7C);
+        del.setTextColor(0xFF46B485);
         del.setGravity(Gravity.CENTER);
         del.setPadding(Ui.dp(this, 8), 0, 0, 0);
         del.setOnClickListener(v -> {
@@ -994,7 +994,7 @@ public class ChatActivity extends Activity {
         if (!question.isEmpty()) {
             TextView qt = new TextView(this);
             qt.setText(question);
-            qt.setTextColor(0xFFD9F7E6);
+            qt.setTextColor(0xFF93FFC6);
             qt.setTextSize(14f);
             qt.setLineSpacing(dp(2), 1f);
             qt.setPadding(0, 0, 0, dp(12));
@@ -1073,7 +1073,7 @@ public class ChatActivity extends Activity {
         } else {
             TextView n = new TextView(this);
             n.setText(num > 0 ? String.valueOf(num) : "✎");
-            n.setTextColor(0xFF00E676);
+            n.setTextColor(0xFF3CFF8F);
             n.setTypeface(Typeface.DEFAULT_BOLD);
             n.setTextSize(num > 0 ? 13f : 15f);
             n.setMinWidth(dp(24));
@@ -1082,7 +1082,7 @@ public class ChatActivity extends Activity {
 
         TextView l = new TextView(this);
         l.setText(label);
-        l.setTextColor(0xFFD9F7E6);
+        l.setTextColor(0xFF93FFC6);
         l.setTextSize(14f);
         l.setLayoutParams(new LinearLayout.LayoutParams(0,
                 LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
@@ -1092,7 +1092,7 @@ public class ChatActivity extends Activity {
         if (desc != null && !desc.isEmpty()) {
             TextView d = new TextView(this);
             d.setText(desc);
-            d.setTextColor(0xFF7FA98F);
+            d.setTextColor(0xFF46B485);
             d.setTextSize(12f);
             d.setPadding(dp(24), dp(3), 0, 0);
             row.addView(d);
@@ -1125,7 +1125,7 @@ public class ChatActivity extends Activity {
 
     private void customAnswer(JSONObject req, int index, JSONArray answers, String header) {
         final EditText et = new EditText(this);
-        et.setTextColor(0xFFD9F7E6);
+        et.setTextColor(0xFF93FFC6);
         et.setHint("Scrivi la risposta…");
         LinearLayout wrap = new LinearLayout(this);
         wrap.setPadding(dp(18), dp(4), dp(18), dp(4));

@@ -15,13 +15,13 @@ import android.widget.TextView;
  */
 public final class TableView {
 
-    private static final int C_GRID = 0xFF17281D;
-    private static final int C_HEAD_BG = 0xFF12241A;
-    private static final int C_HEAD_FG = 0xFF9FE8C0;
-    private static final int C_ROW_A = 0xFF0C1710;
-    private static final int C_ROW_B = 0xFF0A130D;
-    private static final int C_CELL_FG = 0xFFB8D9C6;
-    private static final int C_KEY_FG = 0xFF88B09A;
+    private static final int C_GRID = 0xFF123A2A;
+    private static final int C_HEAD_BG = 0xFF07211A;
+    private static final int C_HEAD_FG = 0xFF93FFC6;
+    private static final int C_ROW_A = 0xFF04140F;
+    private static final int C_ROW_B = 0xFF03110C;
+    private static final int C_CELL_FG = 0xFFB9FFD8;
+    private static final int C_KEY_FG = 0xFF6FD3A3;
 
     private TableView() {
     }

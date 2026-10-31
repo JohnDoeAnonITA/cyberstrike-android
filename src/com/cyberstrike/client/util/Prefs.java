@@ -126,4 +126,13 @@ public final class Prefs {
     public static void setAutostart(Context c, boolean v) {
         sp(c).edit().putBoolean("autostart", v).apply();
     }
+
+    /** Colonna sonora dell'app (default: attiva). */
+    public static boolean music(Context c) {
+        return sp(c).getBoolean("music", true);
+    }
+
+    public static void setMusic(Context c, boolean v) {
+        sp(c).edit().putBoolean("music", v).apply();
+    }
 }

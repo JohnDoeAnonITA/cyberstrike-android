@@ -41,11 +41,11 @@ public final class ModelTreePicker {
     private static final int TYPE_MODEL = 1;
     private static final int TYPE_EMPTY = 2;
 
-    private static final int C_BG = 0xFF0A0F0C;
-    private static final int C_HEAD = 0xFF0E1A13;
-    private static final int C_GREEN = 0xFF00E676;
-    private static final int C_TEXT = 0xFFD9F7E6;
-    private static final int C_DIM = 0xFF6E8F7C;
+    private static final int C_BG = 0xFF04140F;
+    private static final int C_HEAD = 0xFF07211A;
+    private static final int C_GREEN = 0xFF3CFF8F;
+    private static final int C_TEXT = 0xFF93FFC6;
+    private static final int C_DIM = 0xFF46B485;
 
     private ModelTreePicker() {
     }
@@ -97,7 +97,7 @@ public final class ModelTreePicker {
         search.setSingleLine(true);
         search.setTextSize(15f);
         search.setTextColor(C_TEXT);
-        search.setHintTextColor(0xFF3F5A4A);
+        search.setHintTextColor(0xFF1F6B4E);
         box.addView(search);
 
         final ListView list = new ListView(c);

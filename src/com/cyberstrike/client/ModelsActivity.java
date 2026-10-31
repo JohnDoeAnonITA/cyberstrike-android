@@ -512,8 +512,8 @@ public class ModelsActivity extends Activity {
     private EditText field(String hint) {
         EditText e = new EditText(this);
         e.setHint(hint);
-        e.setTextColor(0xFFD9F7E6);
-        e.setHintTextColor(0xFF3F5A4A);
+        e.setTextColor(0xFF93FFC6);
+        e.setHintTextColor(0xFF1F6B4E);
         e.setSingleLine(true);
         e.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
         return e;
@@ -919,21 +919,21 @@ public class ModelsActivity extends Activity {
             switch (r.kind) {
                 case K_HEADER:
                     t.setTextSize(12f);
-                    t.setTextColor(0xFF6E8F7C);
+                    t.setTextColor(0xFF46B485);
                     s.setVisibility(View.GONE);
                     break;
                 case K_PROVIDER:
                     t.setTextSize(15f);
-                    t.setTextColor(0xFFD9F7E6);
+                    t.setTextColor(0xFF93FFC6);
                     t.setTypeface(null, android.graphics.Typeface.BOLD);
                     break;
                 case K_DISABLED:
                     t.setTextSize(14f);
-                    t.setTextColor(0xFF3F5A4A);
+                    t.setTextColor(0xFF1F6B4E);
                     break;
                 default:
                     t.setTextSize(12f);
-                    t.setTextColor(0xFF3F5A4A);
+                    t.setTextColor(0xFF1F6B4E);
                     s.setVisibility(View.GONE);
                     break;
             }

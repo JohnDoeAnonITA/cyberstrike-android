@@ -1,17 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- tema hacker: nero verdastro + neon -->
-    <color name="bg">#050806</color>
-    <color name="bg_elev">#0B120D</color>
-    <color name="bg_elev2">#101A14</color>
-    <color name="stroke">#1C2E22</color>
-    <color name="text">#D9F7E6</color>
-    <color name="text_dim">#6E8F7C</color>
-    <color name="text_faint">#3F5A4A</color>
-    <color name="accent">#00E676</color>
-    <color name="accent_dim">#0C2A1B</color>
-    <color name="ok">#00E676</color>
-    <color name="danger">#FF3B4E</color>
-    <color name="warn">#FFC857</color>
-    <color name="icon_bg">#050806</color>
+    <!-- PIP-BOY / fosforo verde su vetro catodico -->
+    <color name="bg">#020A08</color>
+    <color name="bg_elev">#04140F</color>
+    <color name="bg_elev2">#07211A</color>
+    <color name="stroke">#1B5C40</color>
+    <color name="stroke_hot">#3CFF8F</color>
+    <color name="text">#93FFC6</color>
+    <color name="text_dim">#46B485</color>
+    <color name="text_faint">#1F6B4E</color>
+    <color name="accent">#3CFF8F</color>
+    <color name="accent_dim">#0A2E20</color>
+    <color name="accent_soft">#15503A</color>
+    <color name="ok">#3CFF8F</color>
+    <color name="danger">#FF6A3D</color>
+    <color name="warn">#FFC24D</color>
+    <color name="icon_bg">#020A08</color>
+    <color name="scan">#66000000</color>
+    <color name="on_accent">#00210F</color>
 </resources>

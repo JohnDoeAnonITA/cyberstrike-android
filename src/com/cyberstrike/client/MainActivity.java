@@ -23,6 +23,8 @@ import android.widget.TextView;
 
 import com.cyberstrike.client.api.CsClient;
 import com.cyberstrike.client.api.EventStream;
+import com.cyberstrike.client.ui.BootScreen;
+import com.cyberstrike.client.util.Ambient;
 import com.cyberstrike.client.util.Bootstrap;
 import com.cyberstrike.client.util.Diag;
 import com.cyberstrike.client.util.Prefs;
@@ -66,6 +68,21 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        // avvio "ROBCO" solo alla prima apertura, non dopo una rotazione
+        BootScreen boot = (BootScreen) findViewById(R.id.boot);
+        if (boot != null && savedInstanceState == null) boot.start();
+
+        // la colonna sonora legge un file locale: serve il permesso audio.
+        // Lo chiediamo a boot finito, per non coprire l'animazione iniziale.
+        if (Ambient.enabled(this) && !Ambient.hasPermission(this)) {
+            ui.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    if (!isFinishing()) Ambient.requestPermission(MainActivity.this);
+                }
+            }, 2800);
+        }
 
         status = (TextView) findViewById(R.id.status);
         dot = findViewById(R.id.dot);
@@ -119,6 +136,17 @@ public class MainActivity extends Activity {
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
         super.onRequestPermissionsResult(requestCode, permissions, results);
+        if (requestCode == 5001) {
+            boolean ok = results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED;
+            Diag.add("music", "permesso audio = " + ok);
+            if (ok) {
+                Ambient.resume(this);
+            } else {
+                Ambient.setEnabled(this, false);
+                Ui.toast(this, "Musica disattivata (permesso negato)");
+            }
+            return;
+        }
         if (requestCode != REQ_TERMUX_PERM) return;
         Prefs.setPermAsked(this, true);
         boolean granted = results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED;
@@ -313,7 +341,7 @@ public class MainActivity extends Activity {
 
         final TextView msg = new TextView(this);
         msg.setText("Scarico Termux…");
-        msg.setTextColor(0xFFD9F7E6);
+        msg.setTextColor(0xFF93FFC6);
         final ProgressBar bar = new ProgressBar(this, null,
                 android.R.attr.progressBarStyleHorizontal);
         bar.setMax(100);
@@ -616,6 +644,7 @@ public class MainActivity extends Activity {
         m.getMenu().add(0, 7, 6, "Diagnostica");
         m.getMenu().add(0, 8, 7, "Richiedi permesso Termux");
         m.getMenu().add(0, 9, 8, "Modelli e provider");
+        m.getMenu().add(0, 10, 9, Ambient.enabled(this) ? "Musica: ON" : "Musica: OFF");
         m.setOnMenuItemClickListener(item -> {
             switch (item.getItemId()) {
                 case 1:
@@ -645,6 +674,10 @@ public class MainActivity extends Activity {
                     return true;
                 case 9:
                     startActivity(new Intent(this, ModelsActivity.class));
+                    return true;
+                case 10:
+                    Ambient.toggle(this);
+                    Ui.toast(this, Ambient.enabled(this) ? "Musica: ON" : "Musica: OFF");
                     return true;
             }
             return false;
@@ -738,19 +771,19 @@ public class MainActivity extends Activity {
 
         final CheckBox allowAll = new CheckBox(this);
         allowAll.setText("Permetti tutti i tool (allow-all)");
-        allowAll.setTextColor(0xFFD9F7E6);
+        allowAll.setTextColor(0xFF93FFC6);
         allowAll.setChecked(Prefs.allowAll(this));
         root.addView(allowAll);
 
         final CheckBox wvDebug = new CheckBox(this);
         wvDebug.setText("Debug WebView terminale (chrome://inspect)");
-        wvDebug.setTextColor(0xFFD9F7E6);
+        wvDebug.setTextColor(0xFF93FFC6);
         wvDebug.setChecked(Prefs.webviewDebug(this));
         root.addView(wvDebug);
 
         final CheckBox auto = new CheckBox(this);
         auto.setText("Avvia il server da Termux all'apertura");
-        auto.setTextColor(0xFFD9F7E6);
+        auto.setTextColor(0xFF93FFC6);
         auto.setChecked(Prefs.autostart(this));
         root.addView(auto);
 

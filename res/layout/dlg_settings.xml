@@ -1,77 +1,84 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content">
+    android:layout_height="wrap_content"
+    android:background="@color/bg">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="20dp">
+        android:padding="18dp">
 
         <TextView
-            style="@style/SubText"
+            style="@style/PipLabel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Server URL" />
+            android:text="SERVER URL" />
 
         <EditText
             android:id="@+id/url"
             android:layout_width="match_parent"
             android:layout_height="44dp"
+            android:layout_marginTop="4dp"
             android:layout_marginBottom="14dp"
             android:background="@drawable/bg_input"
-            android:paddingStart="14dp"
-            android:paddingEnd="14dp"
+            android:fontFamily="monospace"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
             android:singleLine="true"
             android:textColor="@color/text"
-            android:textSize="14sp"
+            android:textSize="13sp"
             android:inputType="textUri"
             android:hint="http://127.0.0.1:27182"
             android:textColorHint="@color/text_faint" />
 
         <TextView
-            style="@style/SubText"
+            style="@style/PipLabel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Token (opzionale)" />
+            android:text="TOKEN (OPZIONALE)" />
 
         <EditText
             android:id="@+id/token"
             android:layout_width="match_parent"
             android:layout_height="44dp"
+            android:layout_marginTop="4dp"
             android:layout_marginBottom="14dp"
             android:background="@drawable/bg_input"
-            android:paddingStart="14dp"
-            android:paddingEnd="14dp"
+            android:fontFamily="monospace"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
             android:singleLine="true"
             android:textColor="@color/text"
-            android:textSize="14sp"
+            android:textSize="13sp"
             android:inputType="textPassword"
             android:hint="Bearer token"
             android:textColorHint="@color/text_faint" />
 
         <TextView
-            style="@style/SubText"
+            style="@style/PipLabel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Agente" />
+            android:text="AGENTE" />
 
         <Spinner
             android:id="@+id/agent"
             android:layout_width="match_parent"
             android:layout_height="44dp"
+            android:layout_marginTop="2dp"
             android:layout_marginBottom="14dp" />
 
         <TextView
-            style="@style/SubText"
+            style="@style/PipLabel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Modello" />
+            android:text="MODELLO" />
 
         <Spinner
             android:id="@+id/model"
             android:layout_width="match_parent"
-            android:layout_height="44dp" />
+            android:layout_height="44dp"
+            android:layout_marginTop="2dp" />
     </LinearLayout>
 </ScrollView>

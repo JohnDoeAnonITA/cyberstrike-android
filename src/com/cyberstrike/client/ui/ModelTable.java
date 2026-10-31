@@ -60,7 +60,7 @@ public class ModelTable extends LinearLayout {
         TextView t = new TextView(c);
         t.setText(text);
         t.setTextSize(11f);
-        t.setTextColor(0xFF6E8F7C);
+        t.setTextColor(0xFF46B485);
         t.setPadding(0, 0, Ui.dp(c, 6), 0);
         return t;
     }
@@ -71,8 +71,8 @@ public class ModelTable extends LinearLayout {
         e.setText(value);
         e.setSingleLine(true);
         e.setTextSize(14f);
-        e.setTextColor(0xFFD9F7E6);
-        e.setHintTextColor(0xFF3F5A4A);
+        e.setTextColor(0xFF93FFC6);
+        e.setHintTextColor(0xFF1F6B4E);
         e.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
         return e;
     }
@@ -89,7 +89,7 @@ public class ModelTable extends LinearLayout {
         TextView del = new TextView(getContext());
         del.setText("✕");
         del.setTextSize(16f);
-        del.setTextColor(0xFF6E8F7C);
+        del.setTextColor(0xFF46B485);
         del.setGravity(Gravity.CENTER);
         del.setOnClickListener(new View.OnClickListener() {
             @Override

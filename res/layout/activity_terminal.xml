@@ -1,55 +1,61 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#000000"
-    android:orientation="vertical">
+    android:background="@color/bg">
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="52dp"
-        android:background="@color/bg"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingStart="4dp"
-        android:paddingEnd="8dp">
+        android:layout_height="match_parent"
+        android:orientation="vertical">
 
-        <TextView
-            android:id="@+id/back"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:gravity="center"
-            android:text="‹"
-            android:textColor="@color/text"
-            android:textSize="30sp"
-            android:background="?android:attr/selectableItemBackgroundBorderless" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:background="@drawable/bg_header"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="2dp"
+            android:paddingEnd="6dp">
 
-        <TextView
-            android:id="@+id/title"
-            style="@style/HeaderText"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            <TextView
+                android:id="@+id/back"
+                style="@style/PipButton"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:text="‹"
+                android:textColor="@color/accent"
+                android:textSize="26sp" />
+
+            <TextView
+                android:id="@+id/title"
+                style="@style/PipHeader"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/terminal" />
+
+            <TextView
+                android:id="@+id/restart"
+                style="@style/PipButton"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"
+                android:background="@drawable/bg_fab_dim"
+                android:text="@string/terminal_new"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <WebView
+            android:id="@+id/web"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
             android:layout_weight="1"
-            android:text="@string/terminal" />
-
-        <TextView
-            android:id="@+id/restart"
-            android:layout_width="wrap_content"
-            android:layout_height="40dp"
-            android:gravity="center"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
-            android:text="Nuova"
-            android:textColor="@color/accent"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            android:background="?android:attr/selectableItemBackgroundBorderless" />
+            android:background="@color/bg" />
     </LinearLayout>
 
-    <WebView
-        android:id="@+id/web"
+    <com.cyberstrike.client.ui.CrtOverlay
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:background="#000000" />
-</LinearLayout>
+        android:layout_height="match_parent" />
+</FrameLayout>

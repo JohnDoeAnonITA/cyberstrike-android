@@ -8,21 +8,53 @@
         <item name="android:textColorPrimary">@color/text</item>
         <item name="android:textColorSecondary">@color/text_dim</item>
         <item name="android:colorAccent">@color/accent</item>
+        <item name="android:colorControlActivated">@color/accent</item>
         <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowAnimationStyle">@null</item>
     </style>
 
-    <style name="HeaderText">
-        <item name="android:textColor">@color/text</item>
-        <item name="android:textSize">16sp</item>
+    <!-- intestazione: maiuscolo, monospace, verde fosforo -->
+    <style name="PipHeader">
+        <item name="android:textColor">@color/accent</item>
+        <item name="android:textSize">15sp</item>
         <item name="android:textStyle">bold</item>
+        <item name="android:fontFamily">monospace</item>
+        <item name="android:letterSpacing">0.10</item>
+        <item name="android:textAllCaps">true</item>
         <item name="android:singleLine">true</item>
         <item name="android:ellipsize">end</item>
     </style>
 
-    <style name="SubText">
+    <style name="PipSub">
         <item name="android:textColor">@color/text_dim</item>
-        <item name="android:textSize">12sp</item>
+        <item name="android:textSize">10sp</item>
+        <item name="android:fontFamily">monospace</item>
+        <item name="android:letterSpacing">0.08</item>
+        <item name="android:textAllCaps">true</item>
         <item name="android:singleLine">true</item>
         <item name="android:ellipsize">end</item>
     </style>
+
+    <style name="PipLabel">
+        <item name="android:textColor">@color/text_faint</item>
+        <item name="android:textSize">9sp</item>
+        <item name="android:fontFamily">monospace</item>
+        <item name="android:letterSpacing">0.18</item>
+        <item name="android:textAllCaps">true</item>
+    </style>
+
+    <style name="PipButton">
+        <item name="android:textColor">@color/accent</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:fontFamily">monospace</item>
+        <item name="android:letterSpacing">0.08</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:gravity">center</item>
+        <item name="android:background">?android:attr/selectableItemBackgroundBorderless</item>
+    </style>
+
+    <!-- nomi storici, mantenuti per i layout che li usano -->
+    <style name="HeaderText" parent="PipHeader" />
+    <style name="SubText" parent="PipSub" />
 </resources>
