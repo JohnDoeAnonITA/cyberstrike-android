@@ -16,8 +16,6 @@ letta dai file audio del telefono.
 
 ![Sessioni — lista in stile PIP-BOY](docs/screenshot-sessioni.jpg)
 
-![Chat — streaming SSE con bolle, tool e tabelle](docs/screenshot-chat.jpg)
-
 ```
 ┌────────────────────────────────┐
 │  App CyberStrike (Java)        │
