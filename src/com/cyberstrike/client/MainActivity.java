@@ -143,7 +143,7 @@ public class MainActivity extends Activity {
                 Ambient.resume(this);
             } else {
                 Ambient.setEnabled(this, false);
-                Ui.toast(this, "Musica disattivata (permesso negato)");
+                Ui.toast(this, getString(R.string.music_perm_denied));
             }
             return;
         }
@@ -154,7 +154,7 @@ public class MainActivity extends Activity {
         if (granted) {
             boot();
         } else {
-            Ui.toast(this, "Permesso negato: avvia il server a mano da Termux");
+            Ui.toast(this, getString(R.string.termux_perm_denied));
             onOffline();
         }
     }
@@ -211,7 +211,7 @@ public class MainActivity extends Activity {
 
                 if (!Bootstrap.isLocal(Prefs.base(MainActivity.this))) {
                     // server remoto: l'app è solo un client, Termux non serve
-                    Diag.add("boot", "server remoto non raggiungibile");
+                    Diag.add("boot", getString(R.string.remote_unreachable));
                     done(false);
                     return;
                 }
@@ -236,7 +236,7 @@ public class MainActivity extends Activity {
                 ui.post(new Runnable() {
                     @Override
                     public void run() {
-                        setStatus("Preparazione ambiente…", false);
+                        setStatus(getString(R.string.preparing), false);
                     }
                 });
 
@@ -247,13 +247,8 @@ public class MainActivity extends Activity {
                             booting = false;
                             onOffline();
                             String why = Bootstrap.lastError == null
-                                    ? "motivo sconosciuto" : Bootstrap.lastError;
-                            showSetupHint("Termux ha rifiutato il comando.\n\n"
-                                    + "Causa: " + why + "\n\n"
-                                    + "Verifica in Termux: allow-external-apps = true in "
-                                    + "~/.termux/termux.properties, poi termux-reload-settings.\n"
-                                    + "Verifica anche il permesso RUN_COMMAND nelle "
-                                    + "impostazioni dell'app.");
+                                    ? getString(R.string.unknown_reason) : Bootstrap.lastError;
+                            showSetupHint(getString(R.string.setup_refused_body, why));
                         }
                     });
                     return;
@@ -272,7 +267,7 @@ public class MainActivity extends Activity {
                         ui.post(new Runnable() {
                             @Override
                             public void run() {
-                                setStatus("Installazione… " + (secs / 60) + "m " + (secs % 60) + "s",
+                                setStatus(getString(R.string.installing) + (secs / 60) + "m " + (secs % 60) + "s",
                                         false);
                             }
                         });
@@ -282,11 +277,7 @@ public class MainActivity extends Activity {
                         ui.post(new Runnable() {
                             @Override
                             public void run() {
-                                showSetupHint("Nessuna risposta dopo 5 minuti.\n\n"
-                                        + "Se è il primo avvio il download può essere lento. "
-                                        + "Altrimenti verifica in Termux:\n"
-                                        + "• allow-external-apps = true\n"
-                                        + "• log: ~/.cyberstrike-setup.log");
+                                showSetupHint(getString(R.string.no_response_body));
                             }
                         });
                     }
@@ -309,20 +300,11 @@ public class MainActivity extends Activity {
 
     private void showTermuxMissing() {
         new AlertDialog.Builder(this)
-                .setTitle("Termux richiesto")
-                .setMessage("CyberStrike gira dentro Termux.\n\n"
-                        + "1. Tocca «Scarica e installa»: l'app scarica l'APK adatto "
-                        + "al tuo dispositivo dalle release GitHub e apre l'installer "
-                        + "(serve consentire le sorgenti sconosciute).\n"
-                        + "2. Apri Termux una volta e abilita l'esecuzione da altre app:\n"
-                        + "   ~/.termux/termux.properties → allow-external-apps = true\n"
-                        + "   poi esegui: termux-reload-settings\n\n"
-                        + "3. Torna qui: riprova da sola.\n\n"
-                        + "In alternativa puoi usare un server CyberStrike remoto: "
-                        + "⋮ → Impostazioni → Server URL.")
-                .setPositiveButton("Scarica e installa", (d, w) -> installTermux())
+                .setTitle(getString(R.string.termux_required_title))
+                .setMessage(getString(R.string.termux_required_body))
+                .setPositiveButton(getString(R.string.download_install), (d, w) -> installTermux())
                 .setNeutralButton("GitHub", (d, w) -> openUrl(TermuxInstaller.releasesPage()))
-                .setNegativeButton("Chiudi", null)
+                .setNegativeButton(getString(R.string.close), null)
                 .show();
     }
 
@@ -330,7 +312,7 @@ public class MainActivity extends Activity {
     private void installTermux() {
         if (!TermuxInstaller.canInstall(this)) {
             TermuxInstaller.openUnknownSources(this);
-            Ui.toast(this, "Consenti l'installazione da CyberStrike, poi riprova");
+            Ui.toast(this, getString(R.string.allow_install_hint));
             return;
         }
 
@@ -340,7 +322,7 @@ public class MainActivity extends Activity {
         box.setPadding(pad, pad, pad, pad);
 
         final TextView msg = new TextView(this);
-        msg.setText("Scarico Termux…");
+        msg.setText(getString(R.string.downloading_termux));
         msg.setTextColor(0xFF93FFC6);
         final ProgressBar bar = new ProgressBar(this, null,
                 android.R.attr.progressBarStyleHorizontal);
@@ -349,10 +331,10 @@ public class MainActivity extends Activity {
         box.addView(bar);
 
         final AlertDialog dlg = new AlertDialog.Builder(this)
-                .setTitle("Installa Termux")
+                .setTitle(getString(R.string.install_termux))
                 .setView(box)
                 .setCancelable(false)
-                .setNegativeButton("Annulla", null)
+                .setNegativeButton(getString(R.string.cancel), null)
                 .create();
         dlg.show();
 
@@ -370,7 +352,7 @@ public class MainActivity extends Activity {
                                         @Override
                                         public void run() {
                                             bar.setProgress(pct);
-                                            msg.setText("Scarico Termux… " + pct + "%");
+                                            msg.setText(getString(R.string.downloading_pct, pct));
                                         }
                                     });
                                 }
@@ -383,10 +365,10 @@ public class MainActivity extends Activity {
                             try {
                                 TermuxInstaller.install(MainActivity.this, f);
                                 Ui.toast(MainActivity.this,
-                                        "Completa l'installazione, poi torna qui");
+                                        getString(R.string.complete_install));
                             } catch (Exception e) {
                                 Diag.add("termux", "installer: " + e.getMessage());
-                                Ui.toast(MainActivity.this, "Installer non disponibile");
+                                Ui.toast(MainActivity.this, getString(R.string.installer_unavailable));
                             }
                         }
                     });
@@ -397,12 +379,12 @@ public class MainActivity extends Activity {
                         public void run() {
                             dlg.dismiss();
                             new AlertDialog.Builder(MainActivity.this)
-                                    .setTitle("Download fallito")
+                                    .setTitle(getString(R.string.download_failed))
                                     .setMessage(e.getMessage()
-                                            + "\n\nPuoi scaricarlo dal browser.")
+                                            + getString(R.string.download_failed_hint))
                                     .setPositiveButton("GitHub", (d2, w2) ->
                                             openUrl(TermuxInstaller.releasesPage()))
-                                    .setNegativeButton("Chiudi", null)
+                                    .setNegativeButton(getString(R.string.close), null)
                                     .show();
                         }
                     });
@@ -413,28 +395,28 @@ public class MainActivity extends Activity {
 
     private void showDiagnostics() {
         new AlertDialog.Builder(this)
-                .setTitle("Diagnostica")
+                .setTitle(getString(R.string.menu_diagnostics))
                 .setMessage(Diag.dump())
-                .setPositiveButton("Copia", (d, w) -> {
+                .setPositiveButton(getString(R.string.copy), (d, w) -> {
                     android.content.ClipboardManager cm =
                             (android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
                     if (cm != null) cm.setPrimaryClip(
-                            android.content.ClipData.newPlainText("CyberStrike", Diag.dump()));
-                    Ui.toast(this, "Log copiato");
+                            android.content.ClipData.newPlainText(getString(R.string.app_name), Diag.dump()));
+                    Ui.toast(this, getString(R.string.log_copied));
                 })
-                .setNeutralButton("Pulisci", (d, w) -> {
+                .setNeutralButton(getString(R.string.clear), (d, w) -> {
                     Diag.clear();
-                    Ui.toast(this, "Log pulito");
+                    Ui.toast(this, getString(R.string.log_cleared));
                 })
-                .setNegativeButton("Chiudi", null)
+                .setNegativeButton(getString(R.string.close), null)
                 .show();
     }
 
     private void showSetupHint(String msg) {
         new AlertDialog.Builder(this)
-                .setTitle("Setup CyberStrike")
+                .setTitle(getString(R.string.setup_title))
                 .setMessage(msg)
-                .setPositiveButton("Apri Termux", (d, w) -> Bootstrap.openTermux(this))
+                .setPositiveButton(getString(R.string.menu_open_termux), (d, w) -> Bootstrap.openTermux(this))
                 .setNegativeButton("OK", null)
                 .show();
     }
@@ -443,7 +425,7 @@ public class MainActivity extends Activity {
         try {
             startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)));
         } catch (Exception e) {
-            Ui.toast(this, "Nessun browser disponibile");
+            Ui.toast(this, getString(R.string.no_browser));
         }
     }
 
@@ -482,8 +464,7 @@ public class MainActivity extends Activity {
         online = false;
         findViewById(R.id.fab).setAlpha(0.35f);
         setStatus(getString(R.string.offline) + "  ·  " + hostOf(Prefs.base(this)), false);
-        Ui.toast(this, "Server non raggiungibile. Tocca lo stato per riprovare, "
-                + "oppure usa ⋮ → Installa / avvia.");
+        Ui.toast(this, getString(R.string.offline_hint));
     }
 
     /** host:porta dell'URL configurato, per l'header. */
@@ -539,7 +520,7 @@ public class MainActivity extends Activity {
 
     private void newSession() {
         if (!online) {
-            Ui.toast(this, "Server non connesso — attendi l'avvio o tocca lo stato");
+            Ui.toast(this, getString(R.string.not_connected));
             return;
         }
         io.execute(new Runnable() {
@@ -558,7 +539,7 @@ public class MainActivity extends Activity {
                     ui.post(new Runnable() {
                         @Override
                         public void run() {
-                            Ui.toast(MainActivity.this, "Errore: " + msg);
+                            Ui.toast(MainActivity.this, getString(R.string.error_prefix) + msg);
                         }
                     });
                 }
@@ -577,7 +558,7 @@ public class MainActivity extends Activity {
     private void confirmDelete(final JSONObject s) {
         final String title = displayTitle(s);
         new AlertDialog.Builder(this)
-                .setTitle("Eliminare la sessione?")
+                .setTitle(getString(R.string.delete_session_title))
                 .setMessage(title)
                 .setPositiveButton(R.string.delete, (d, w) -> {
                     io.execute(() -> {
@@ -594,7 +575,7 @@ public class MainActivity extends Activity {
 
     private static String displayTitle(JSONObject s) {
         String t = s.optString("title", "");
-        if (t.isEmpty()) t = s.optString("slug", "Sessione");
+        if (t.isEmpty()) t = s.optString("slug", CsApp.ctx().getString(R.string.session_fallback));
         return t;
     }
 
@@ -618,9 +599,9 @@ public class MainActivity extends Activity {
                             // Server attivo: il bootstrap è idempotente e (re)installa
                             // il watchdog di riavvio senza toccare il server in esecuzione.
                             if (Bootstrap.run(MainActivity.this)) {
-                                Ui.toast(MainActivity.this, "Server attivo — watchdog aggiornato");
+                                Ui.toast(MainActivity.this, getString(R.string.server_active_watched));
                             } else {
-                                Ui.toast(MainActivity.this, "Server attivo (watchdog non aggiornato)");
+                                Ui.toast(MainActivity.this, getString(R.string.server_active_nowatch));
                             }
                         } else {
                             boot();
@@ -635,16 +616,16 @@ public class MainActivity extends Activity {
 
     private void showMenu(View anchor) {
         PopupMenu m = new PopupMenu(this, anchor);
-        m.getMenu().add(0, 1, 0, "Nuova sessione");
-        m.getMenu().add(0, 2, 1, "Terminale");
-        m.getMenu().add(0, 3, 2, "Aggiorna");
-        m.getMenu().add(0, 4, 3, "Installa / avvia server");
-        m.getMenu().add(0, 5, 4, "Apri Termux");
-        m.getMenu().add(0, 6, 5, "Impostazioni");
-        m.getMenu().add(0, 7, 6, "Diagnostica");
-        m.getMenu().add(0, 8, 7, "Richiedi permesso Termux");
-        m.getMenu().add(0, 9, 8, "Modelli e provider");
-        m.getMenu().add(0, 10, 9, Ambient.enabled(this) ? "Musica: ON" : "Musica: OFF");
+        m.getMenu().add(0, 1, 0, getString(R.string.new_session));
+        m.getMenu().add(0, 2, 1, getString(R.string.terminal));
+        m.getMenu().add(0, 3, 2, getString(R.string.refresh));
+        m.getMenu().add(0, 4, 3, getString(R.string.menu_setup_server));
+        m.getMenu().add(0, 5, 4, getString(R.string.menu_open_termux));
+        m.getMenu().add(0, 6, 5, getString(R.string.settings));
+        m.getMenu().add(0, 7, 6, getString(R.string.menu_diagnostics));
+        m.getMenu().add(0, 8, 7, getString(R.string.menu_request_perm));
+        m.getMenu().add(0, 9, 8, getString(R.string.menu_models));
+        m.getMenu().add(0, 10, 9, Ambient.enabled(this) ? getString(R.string.music_on) : getString(R.string.music_off));
         m.setOnMenuItemClickListener(item -> {
             switch (item.getItemId()) {
                 case 1:
@@ -677,7 +658,7 @@ public class MainActivity extends Activity {
                     return true;
                 case 10:
                     Ambient.toggle(this);
-                    Ui.toast(this, Ambient.enabled(this) ? "Musica: ON" : "Musica: OFF");
+                    Ui.toast(this, Ambient.enabled(this) ? getString(R.string.music_on) : getString(R.string.music_off));
                     return true;
             }
             return false;
@@ -770,27 +751,27 @@ public class MainActivity extends Activity {
         LinearLayout root = (LinearLayout) ((ViewGroup) v).getChildAt(0);
 
         final CheckBox allowAll = new CheckBox(this);
-        allowAll.setText("Permetti tutti i tool (allow-all)");
+        allowAll.setText(getString(R.string.opt_allow_all));
         allowAll.setTextColor(0xFF93FFC6);
         allowAll.setChecked(Prefs.allowAll(this));
         root.addView(allowAll);
 
         final CheckBox wvDebug = new CheckBox(this);
-        wvDebug.setText("Debug WebView terminale (chrome://inspect)");
+        wvDebug.setText(getString(R.string.opt_webview_debug));
         wvDebug.setTextColor(0xFF93FFC6);
         wvDebug.setChecked(Prefs.webviewDebug(this));
         root.addView(wvDebug);
 
         final CheckBox auto = new CheckBox(this);
-        auto.setText("Avvia il server da Termux all'apertura");
+        auto.setText(getString(R.string.opt_autostart));
         auto.setTextColor(0xFF93FFC6);
         auto.setChecked(Prefs.autostart(this));
         root.addView(auto);
 
         new AlertDialog.Builder(this)
-                .setTitle("Impostazioni")
+                .setTitle(getString(R.string.settings))
                 .setView(v)
-                .setPositiveButton("Salva", (d, w) -> {
+                .setPositiveButton(getString(R.string.save), (d, w) -> {
                     String u = url.getText().toString().trim();
                     if (u.isEmpty()) u = "http://127.0.0.1:27182";
                     Prefs.setBase(this, u);

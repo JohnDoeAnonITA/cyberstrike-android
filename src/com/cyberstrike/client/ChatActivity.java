@@ -91,7 +91,7 @@ public class ChatActivity extends Activity {
 
         api = new CsClient(Prefs.base(this), Prefs.token(this));
 
-        ((TextView) findViewById(R.id.title)).setText(title.isEmpty() ? "Sessione" : title);
+        ((TextView) findViewById(R.id.title)).setText(title.isEmpty() ? getString(R.string.session_fallback) : title);
         sub = (TextView) findViewById(R.id.sub);
         list = (ListView) findViewById(R.id.list);
         input = (EditText) findViewById(R.id.input);
@@ -101,9 +101,9 @@ public class ChatActivity extends Activity {
             @Override
             public void onTool(MsgAdapter.Row row) {
                 new AlertDialog.Builder(ChatActivity.this)
-                        .setTitle("Dettaglio tool")
+                        .setTitle(getString(R.string.tool_detail))
                         .setMessage(row.detail.isEmpty() ? row.text : row.detail)
-                        .setPositiveButton("Chiudi", null)
+                        .setPositiveButton(getString(R.string.close), null)
                         .show();
             }
         });
@@ -164,7 +164,7 @@ public class ChatActivity extends Activity {
                             adapter.set(rows);
                             loadedOnce = true;
                             scrollToEnd();
-                            sub.setText(adapter.getCount() + " elementi");
+                            sub.setText(adapter.getCount() + getString(R.string.items_suffix));
                         }
                     });
                 } catch (final Exception e) {
@@ -270,16 +270,16 @@ public class ChatActivity extends Activity {
     }
 
     private static String errorText(JSONObject err) {
-        String name = err.optString("name", "Errore");
+        String name = err.optString("name", CsApp.ctx().getString(R.string.error));
         JSONObject data = err.optJSONObject("data");
         String msg = data == null ? "" : data.optString("message", "");
         return "✖ " + name + (msg.isEmpty() ? "" : "\n" + hint(msg));
     }
 
     private static String hint(String msg) {
+        // il messaggio arriva dal server in inglese: il confronto non va localizzato
         if (msg != null && msg.contains("Unable to connect")) {
-            return msg + "\n\nSuggerimento: provider non raggiungibile. "
-                    + "Scegli un altro modello con \u22ee \u2192 Modello.";
+            return msg + "\n\n" + CsApp.ctx().getString(R.string.cannot_connect_hint);
         }
         return msg;
     }
@@ -393,9 +393,9 @@ public class ChatActivity extends Activity {
         i.setType(image ? "image/*" : "*/*");
         try {
             startActivityForResult(Intent.createChooser(i,
-                    image ? "Scegli immagine" : "Scegli file"), image ? REQ_IMAGE : REQ_FILE);
+                    image ? getString(R.string.pick_image_title) : getString(R.string.pick_file_title)), image ? REQ_IMAGE : REQ_FILE);
         } catch (Exception e) {
-            Ui.toast(this, "Nessuna app disponibile per scegliere i file");
+            Ui.toast(this, getString(R.string.no_file_picker));
         }
     }
 
@@ -407,7 +407,7 @@ public class ChatActivity extends Activity {
             return;
         }
         final Uri uri = data.getData();
-        Ui.toast(this, "Preparo l'allegato…");
+        Ui.toast(this, getString(R.string.preparing_attachment));
         io.execute(new Runnable() {
             @Override
             public void run() {
@@ -443,7 +443,7 @@ public class ChatActivity extends Activity {
             byte[] jpeg = compressImage(cr, uri);
             if (jpeg != null) {
                 if (jpeg.length > MAX_ATTACH) {
-                    throw new Exception("Immagine troppo grande (max 12 MB)");
+                    throw new Exception(getString(R.string.image_too_large));
                 }
                 int dot = name.lastIndexOf('.');
                 if (dot > 0) name = name.substring(0, dot);
@@ -477,14 +477,14 @@ public class ChatActivity extends Activity {
 
     private static byte[] readAll(ContentResolver cr, Uri uri, int max) throws Exception {
         InputStream in = cr.openInputStream(uri);
-        if (in == null) throw new Exception("Impossibile leggere il file");
+        if (in == null) throw new Exception(CsApp.ctx().getString(R.string.read_failed));
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         byte[] buf = new byte[8192];
         int n, total = 0;
         try {
             while ((n = in.read(buf)) >= 0) {
                 total += n;
-                if (total > max) throw new Exception("File troppo grande (max 12 MB)");
+                if (total > max) throw new Exception(CsApp.ctx().getString(R.string.file_too_large));
                 bos.write(buf, 0, n);
             }
         } finally {
@@ -637,9 +637,9 @@ public class ChatActivity extends Activity {
         ScrollView sc = new ScrollView(this);
         sc.addView(root);
         new AlertDialog.Builder(this)
-                .setTitle("Emoji")
+                .setTitle(getString(R.string.emoji_title))
                 .setView(sc)
-                .setNegativeButton("Chiudi", null)
+                .setNegativeButton(getString(R.string.close), null)
                 .show();
     }
 
@@ -709,7 +709,7 @@ public class ChatActivity extends Activity {
                         @Override
                         public void run() {
                             setRunning(false);
-                            Diag.add("chat", "risposta completata");
+                            Diag.add("chat", getString(R.string.response_complete));
                             load();
                         }
                     });
@@ -732,7 +732,7 @@ public class ChatActivity extends Activity {
     }
 
     private void abort() {
-        Ui.toast(this, "Interruzione…");
+        Ui.toast(this, getString(R.string.aborting));
         io.execute(new Runnable() {
             @Override
             public void run() {
@@ -748,7 +748,7 @@ public class ChatActivity extends Activity {
                     ui.post(new Runnable() {
                         @Override
                         public void run() {
-                            Ui.toast(ChatActivity.this, "Ferma: " + e.getMessage());
+                            Ui.toast(ChatActivity.this, getString(R.string.stop_prefix) + e.getMessage());
                         }
                     });
                 }
@@ -915,7 +915,7 @@ public class ChatActivity extends Activity {
 
     private void askPermission(JSONObject req) {
         final String id = req.optString("id");
-        String perm = req.optString("permission", "permesso");
+        String perm = req.optString("permission", getString(R.string.permission_label));
         JSONArray patterns = req.optJSONArray("patterns");
         StringBuilder msg = new StringBuilder();
         if (patterns != null) {
@@ -924,14 +924,14 @@ public class ChatActivity extends Activity {
                 msg.append("• ").append(patterns.optString(i));
             }
         }
-        if (msg.length() == 0) msg.append("Richiesta di autorizzazione");
+        if (msg.length() == 0) msg.append(getString(R.string.permission_request));
 
         new AlertDialog.Builder(this)
-                .setTitle("Permesso: " + perm)
+                .setTitle(getString(R.string.permission_prefix) + perm)
                 .setMessage(msg.toString())
-                .setPositiveButton("Consenti", (d, w) -> replyPermission(id, "once"))
-                .setNeutralButton("Sempre", (d, w) -> replyPermission(id, "always"))
-                .setNegativeButton("Nega", (d, w) -> replyPermission(id, "reject"))
+                .setPositiveButton(getString(R.string.allow), (d, w) -> replyPermission(id, "once"))
+                .setNeutralButton(getString(R.string.always), (d, w) -> replyPermission(id, "always"))
+                .setNegativeButton(getString(R.string.deny), (d, w) -> replyPermission(id, "reject"))
                 .show();
     }
 
@@ -969,7 +969,7 @@ public class ChatActivity extends Activity {
             return;
         }
 
-        final String header = q.optString("header", "Domanda");
+        final String header = q.optString("header", getString(R.string.question_title));
         String question = q.optString("question", "");
         JSONArray opts = q.optJSONArray("options");
         final boolean multi = q.optBoolean("multiple", false);
@@ -1024,7 +1024,7 @@ public class ChatActivity extends Activity {
         }
 
         if (custom) {
-            LinearLayout row = optionRow("Altra risposta…", "scrivi tu", false, 0);
+            LinearLayout row = optionRow(getString(R.string.other_answer), getString(R.string.write_yourself), false, 0);
             row.setOnClickListener(v -> {
                 if (holder[0] != null) holder[0].dismiss();
                 customAnswer(req, index, answers, header);
@@ -1037,10 +1037,10 @@ public class ChatActivity extends Activity {
         AlertDialog.Builder b = new AlertDialog.Builder(this)
                 .setTitle(header)
                 .setView(sv)
-                .setNegativeButton("Rifiuta", (d, w) -> rejectQuestion(req));
+                .setNegativeButton(getString(R.string.reject), (d, w) -> rejectQuestion(req));
 
         if (multi) {
-            b.setPositiveButton("Invia", (d, w) -> {
+            b.setPositiveButton(getString(R.string.send), (d, w) -> {
                 JSONArray one = new JSONArray();
                 for (int i = 0; i < checked.length; i++) {
                     if (checked[i]) one.put(labels.get(i));
@@ -1126,7 +1126,7 @@ public class ChatActivity extends Activity {
     private void customAnswer(JSONObject req, int index, JSONArray answers, String header) {
         final EditText et = new EditText(this);
         et.setTextColor(0xFF93FFC6);
-        et.setHint("Scrivi la risposta…");
+        et.setHint(getString(R.string.write_answer));
         LinearLayout wrap = new LinearLayout(this);
         wrap.setPadding(dp(18), dp(4), dp(18), dp(4));
         wrap.addView(et);
@@ -1139,7 +1139,7 @@ public class ChatActivity extends Activity {
                     answers.put(one);
                     askQuestion(req, index + 1, answers);
                 })
-                .setNegativeButton("Annulla", null)
+                .setNegativeButton(getString(R.string.cancel), null)
                 .show();
     }
 
@@ -1164,10 +1164,10 @@ public class ChatActivity extends Activity {
 
     private void showMenu(View anchor) {
         PopupMenu m = new PopupMenu(this, anchor);
-        m.getMenu().add(0, 1, 0, "Modello");
-        m.getMenu().add(0, 2, 1, "Agente");
-        m.getMenu().add(0, 3, 2, "Terminale");
-        m.getMenu().add(0, 4, 3, "Aggiorna");
+        m.getMenu().add(0, 1, 0, getString(R.string.model));
+        m.getMenu().add(0, 2, 1, getString(R.string.agent));
+        m.getMenu().add(0, 3, 2, getString(R.string.terminal));
+        m.getMenu().add(0, 4, 3, getString(R.string.refresh));
         m.setOnMenuItemClickListener(item -> {
             switch (item.getItemId()) {
                 case 1:
@@ -1208,7 +1208,7 @@ public class ChatActivity extends Activity {
                                     @Override
                                     public void onPick(String providerID, String modelID) {
                                         Prefs.setModel(ChatActivity.this, providerID, modelID);
-                                        Ui.toast(ChatActivity.this, "Modello aggiornato");
+                                        Ui.toast(ChatActivity.this, getString(R.string.model_updated));
                                     }
                                 });
                     }
@@ -1236,10 +1236,10 @@ public class ChatActivity extends Activity {
                     @Override
                     public void run() {
                         new AlertDialog.Builder(ChatActivity.this)
-                                .setTitle("Agente")
+                                .setTitle(getString(R.string.agent))
                                 .setItems(names.toArray(new String[0]), (d, w) -> {
                                     Prefs.setAgent(ChatActivity.this, names.get(w));
-                                    Ui.toast(ChatActivity.this, "Agente: " + names.get(w));
+                                    Ui.toast(ChatActivity.this, getString(R.string.agent_prefix) + names.get(w));
                                 })
                                 .show();
                     }

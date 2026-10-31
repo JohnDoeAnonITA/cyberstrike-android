@@ -14,11 +14,18 @@ import com.cyberstrike.client.util.Fonts;
  */
 public class CsApp extends Application {
 
+    private static CsApp instance;
     private int started;
+
+    /** Context applicativo, per le stringhe usate in metodi statici. */
+    public static android.content.Context ctx() {
+        return instance;
+    }
 
     @Override
     public void onCreate() {
         super.onCreate();
+        instance = this;
         registerActivityLifecycleCallbacks(new ActivityLifecycleCallbacks() {
             @Override
             public void onActivityCreated(Activity a, Bundle b) {

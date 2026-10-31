@@ -141,8 +141,8 @@ public class ModelsActivity extends Activity {
         Row head = new Row();
         head.kind = K_HEADER;
         head.title = am.isEmpty()
-                ? "Nessun modello selezionato"
-                : "Attivo: " + ap + " · " + am;
+                ? getString(R.string.no_model_selected)
+                : getString(R.string.active_prefix) + ap + " · " + am;
         rows.add(head);
 
         JSONArray arr = prov.optJSONArray("providers");
@@ -170,8 +170,8 @@ public class ModelsActivity extends Activity {
                 pr.kind = K_PROVIDER;
                 pr.providerID = id;
                 pr.title = (expanded.contains(id) ? "▾  " : "▸  ") + name;
-                pr.sub = (base.isEmpty() ? "nessun baseURL" : base)
-                        + "  ·  " + models.length() + " modelli";
+                pr.sub = (base.isEmpty() ? getString(R.string.no_baseurl) : base)
+                        + "  ·  " + models.length() + getString(R.string.models_count);
                 rows.add(pr);
 
                 if (!expanded.contains(id)) continue;
@@ -202,7 +202,7 @@ public class ModelsActivity extends Activity {
                     Row hr = new Row();
                     hr.kind = K_HIDDEN;
                     hr.providerID = id;
-                    hr.title = hiddenCount + " modelli nascosti — tocca per mostrarli";
+                    hr.title = hiddenCount + getString(R.string.hidden_models);
                     rows.add(hr);
                 }
             }
@@ -211,19 +211,19 @@ public class ModelsActivity extends Activity {
         if (dis.length() > 0) {
             Row h = new Row();
             h.kind = K_HEADER;
-            h.title = "Disattivati";
+            h.title = getString(R.string.disabled);
             rows.add(h);
             for (int i = 0; i < dis.length(); i++) {
                 Row r = new Row();
                 r.kind = K_DISABLED;
                 r.providerID = dis.optString(i);
                 r.title = "◌  " + r.providerID;
-                r.sub = "tocca per riattivare";
+                r.sub = getString(R.string.tap_to_enable);
                 rows.add(r);
             }
         }
 
-        sub.setText(total + " provider attivi  ·  " + dis.length() + " disattivati");
+        sub.setText(total + getString(R.string.providers_active) + dis.length() + getString(R.string.disabled_suffix));
         adapter.set(rows);
         reportPendingDelete();
     }
@@ -240,17 +240,15 @@ public class ModelsActivity extends Activity {
         if (mid != null) {
             Set<String> set = modelIndex.get(pid);
             if (set != null && set.contains(mid)) {
-                Ui.toast(this, "Modello ancora presente: è nella config base "
-                        + "(~/.config/cyberstrike). Usa Nascondi.");
+                Ui.toast(this, getString(R.string.model_in_base_config));
             } else {
-                Ui.toast(this, "Modello eliminato");
+                Ui.toast(this, getString(R.string.model_deleted));
             }
         } else {
             if (modelIndex.containsKey(pid)) {
-                Ui.toast(this, "Provider ancora presente: è nella config base "
-                        + "(~/.config/cyberstrike). Usa Disattiva.");
+                Ui.toast(this, getString(R.string.provider_in_base_config));
             } else {
-                Ui.toast(this, "Provider eliminato");
+                Ui.toast(this, getString(R.string.provider_deleted));
             }
         }
     }
@@ -269,7 +267,7 @@ public class ModelsActivity extends Activity {
                 if (Prefs.providerDefault(this, r.providerID).isEmpty()) {
                     Prefs.setProviderDefault(this, r.providerID, r.modelID);
                 }
-                Ui.toast(this, "Attivo: " + r.providerID + " · " + r.modelID);
+                Ui.toast(this, getString(R.string.active_prefix) + r.providerID + " · " + r.modelID);
                 load();
                 break;
 
@@ -288,7 +286,7 @@ public class ModelsActivity extends Activity {
         if (r.kind == K_PROVIDER) {
             new AlertDialog.Builder(this)
                     .setTitle(r.providerID)
-                    .setItems(new String[]{"Disattiva provider", "Elimina dal server"}, (d, w) -> {
+                    .setItems(new String[]{getString(R.string.disable_provider), getString(R.string.delete_from_server)}, (d, w) -> {
                         if (w == 0) disable(r.providerID);
                         else confirmDeleteProvider(r.providerID);
                     })
@@ -298,12 +296,12 @@ public class ModelsActivity extends Activity {
             new AlertDialog.Builder(this)
                     .setTitle(r.providerID + " · " + r.modelID)
                     .setItems(new String[]{
-                            "Imposta come predefinito del provider",
-                            "Nascondi dal selettore",
-                            "Elimina dal server"}, (d, w) -> {
+                            getString(R.string.set_default),
+                            getString(R.string.hide_model),
+                            getString(R.string.delete_from_server)}, (d, w) -> {
                         if (w == 0) {
                             Prefs.setProviderDefault(this, r.providerID, r.modelID);
-                            Ui.toast(this, "Predefinito aggiornato");
+                            Ui.toast(this, getString(R.string.default_updated));
                             load();
                         } else if (w == 1) {
                             Prefs.hideModel(this, r.providerID, r.modelID);
@@ -328,7 +326,7 @@ public class ModelsActivity extends Activity {
                     ui.post(new Runnable() {
                         @Override
                         public void run() {
-                            Ui.toast(ModelsActivity.this, "Provider disattivato");
+                            Ui.toast(ModelsActivity.this, getString(R.string.provider_disabled));
                             load();
                         }
                     });
@@ -358,7 +356,7 @@ public class ModelsActivity extends Activity {
                     ui.post(new Runnable() {
                         @Override
                         public void run() {
-                            Ui.toast(ModelsActivity.this, "Provider riattivato");
+                            Ui.toast(ModelsActivity.this, getString(R.string.provider_enabled));
                             load();
                         }
                     });
@@ -376,30 +374,28 @@ public class ModelsActivity extends Activity {
 
     private void confirmDeleteProvider(final String providerID) {
         new AlertDialog.Builder(this)
-                .setTitle("Eliminare " + providerID + "?")
-                .setMessage("Verrà rimosso da /cyberstrike.json e il server dell'app "
-                        + "verrà riavviato. L'istanza principale (4096) non viene toccata.")
-                .setPositiveButton("Elimina", (d, w) -> {
+                .setTitle(getString(R.string.delete_named_title, providerID))
+                .setMessage(getString(R.string.delete_provider_body))
+                .setPositiveButton(getString(R.string.delete), (d, w) -> {
                     pendingProvider = providerID;
                     pendingModel = null;
                     deleteOnServer("d.get('provider',{}).pop('" + providerID + "',None)");
                 })
-                .setNegativeButton("Annulla", null)
+                .setNegativeButton(getString(R.string.cancel), null)
                 .show();
     }
 
     private void confirmDeleteModel(final String providerID, final String modelID) {
         new AlertDialog.Builder(this)
-                .setTitle("Eliminare " + modelID + "?")
-                .setMessage("Verrà rimosso dal provider " + providerID
-                        + " e il server dell'app verrà riavviato.")
-                .setPositiveButton("Elimina", (d, w) -> {
+                .setTitle(getString(R.string.delete_named_title, modelID))
+                .setMessage(getString(R.string.delete_model_body, providerID))
+                .setPositiveButton(getString(R.string.delete), (d, w) -> {
                     pendingProvider = providerID;
                     pendingModel = modelID;
                     deleteOnServer("d.get('provider',{}).get('" + providerID
                             + "',{}).get('models',{}).pop('" + modelID + "',None)");
                 })
-                .setNegativeButton("Annulla", null)
+                .setNegativeButton(getString(R.string.cancel), null)
                 .show();
     }
 
@@ -411,10 +407,10 @@ public class ModelsActivity extends Activity {
         Diag.add("models", "delete: " + pyExpr);
 
         if (!Bootstrap.run(this, prelude)) {
-            Ui.toast(this, "Termux non disponibile");
+            Ui.toast(this, getString(R.string.termux_unavailable));
             return;
         }
-        Ui.toast(this, "Riavvio del server…");
+        Ui.toast(this, getString(R.string.restarting_server));
         io.execute(new Runnable() {
             @Override
             public void run() {
@@ -427,7 +423,7 @@ public class ModelsActivity extends Activity {
                 ui.post(new Runnable() {
                     @Override
                     public void run() {
-                        Ui.toast(ModelsActivity.this, "Fatto");
+                        Ui.toast(ModelsActivity.this, getString(R.string.done));
                         load();
                     }
                 });
@@ -439,9 +435,9 @@ public class ModelsActivity extends Activity {
 
     private void menu(View anchor) {
         PopupMenu m = new PopupMenu(this, anchor);
-        m.getMenu().add(0, 1, 0, "Nuovo provider");
-        m.getMenu().add(0, 2, 1, "Nuovo modello");
-        m.getMenu().add(0, 3, 2, "Aggiorna");
+        m.getMenu().add(0, 1, 0, getString(R.string.new_provider));
+        m.getMenu().add(0, 2, 1, getString(R.string.new_model));
+        m.getMenu().add(0, 3, 2, getString(R.string.refresh));
         m.setOnMenuItemClickListener(item -> {
             switch (item.getItemId()) {
                 case 1:
@@ -467,7 +463,7 @@ public class ModelsActivity extends Activity {
                              final Pick cb) {
         final String label = btn.getText().toString();
         btn.setEnabled(false);
-        btn.setText("Carico…");
+        btn.setText(getString(R.string.loading));
         io.execute(new Runnable() {
             @Override
             public void run() {
@@ -503,9 +499,9 @@ public class ModelsActivity extends Activity {
             labels[i] = name.equals(id) ? id : (name + "\n" + id);
         }
         new AlertDialog.Builder(this)
-                .setTitle("Modelli disponibili (" + models.size() + ")")
+                .setTitle(getString(R.string.available_models) + models.size() + ")")
                 .setItems(labels, (d, w) -> cb.on(models.get(w)))
-                .setNegativeButton("Annulla", null)
+                .setNegativeButton(getString(R.string.cancel), null)
                 .show();
     }
 
@@ -528,7 +524,7 @@ public class ModelsActivity extends Activity {
         final EditText id = field("id (es. openrouter)");
         final EditText name = field("nome (es. OpenRouter)");
         final EditText url = field("baseURL (https://…/v1)");
-        final EditText key = field("API key (opzionale)");
+        final EditText key = field(getString(R.string.apikey_hint));
         key.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
         final ModelTable table = new ModelTable(this);
 
@@ -539,11 +535,11 @@ public class ModelsActivity extends Activity {
         box.addView(table);
 
         final Button load = new Button(this);
-        load.setText("Scegli modelli dalla lista (multipli)");
+        load.setText(getString(R.string.choose_models_multi));
         box.addView(load);
 
         final Button create = new Button(this);
-        create.setText("Crea provider");
+        create.setText(getString(R.string.create_provider));
         box.addView(create);
 
         final AlertDialog[] holder = new AlertDialog[1];
@@ -552,7 +548,7 @@ public class ModelsActivity extends Activity {
             String b = url.getText().toString().trim();
             String k = key.getText().toString().trim();
             if (!b.startsWith("http")) {
-                Ui.toast(this, "Inserisci prima il baseURL");
+                Ui.toast(this, getString(R.string.enter_baseurl_first));
                 return;
             }
             fetchModelsMulti(load, b, k, selected -> table.addModels(selected));
@@ -566,15 +562,15 @@ public class ModelsActivity extends Activity {
             List<String[]> models = table.getModels();
 
             if (!pid.matches("[A-Za-z0-9._-]{1,40}")) {
-                Ui.toast(this, "id non valido (lettere, numeri, . _ -)");
+                Ui.toast(this, getString(R.string.invalid_id));
                 return;
             }
             if (!base.startsWith("http")) {
-                Ui.toast(this, "baseURL deve iniziare con http");
+                Ui.toast(this, getString(R.string.baseurl_must_http));
                 return;
             }
             if (models.isEmpty()) {
-                Ui.toast(this, "Aggiungi almeno un modello: compila la colonna ID");
+                Ui.toast(this, getString(R.string.fill_model_id));
                 return;
             }
             if (pname.isEmpty()) pname = pid;
@@ -594,7 +590,7 @@ public class ModelsActivity extends Activity {
                             public void run() {
                                 expanded.add(fpid);
                                 if (holder[0] != null) holder[0].dismiss();
-                                Ui.toast(ModelsActivity.this, "Provider aggiunto");
+                                Ui.toast(ModelsActivity.this, getString(R.string.provider_added));
                                 load();
                             }
                         });
@@ -614,16 +610,16 @@ public class ModelsActivity extends Activity {
         sc.addView(box);
 
         holder[0] = new AlertDialog.Builder(this)
-                .setTitle("Nuovo provider")
+                .setTitle(getString(R.string.new_provider))
                 .setView(sc)
-                .setNegativeButton("Annulla", null)
+                .setNegativeButton(getString(R.string.cancel), null)
                 .create();
         holder[0].show();
     }
 
     private void addModelDialog() {
         if (activeProviders.isEmpty()) {
-            Ui.toast(this, "Nessun provider attivo");
+            Ui.toast(this, getString(R.string.no_active_provider));
             return;
         }
         LinearLayout box = new LinearLayout(this);
@@ -637,7 +633,7 @@ public class ModelsActivity extends Activity {
         sp.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, names));
 
         final ModelTable table = new ModelTable(this);
-        final EditText key = field("API key (solo per caricare la lista)");
+        final EditText key = field(getString(R.string.apikey_list_hint));
         key.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
 
         box.addView(sp);
@@ -645,18 +641,18 @@ public class ModelsActivity extends Activity {
         box.addView(key);
 
         final Button load = new Button(this);
-        load.setText("Scegli modelli dalla lista (multipli)");
+        load.setText(getString(R.string.choose_models_multi));
         box.addView(load);
 
         final Button add = new Button(this);
-        add.setText("Aggiungi modelli");
+        add.setText(getString(R.string.add_models));
         box.addView(add);
 
         load.setOnClickListener(v -> {
             String pid = activeProviders.get(sp.getSelectedItemPosition())[0];
             String base = providerBase.get(pid);
             if (base == null || base.isEmpty()) {
-                Ui.toast(this, "Questo provider non ha un baseURL");
+                Ui.toast(this, getString(R.string.provider_no_baseurl));
                 return;
             }
             fetchModelsMulti(load, base, key.getText().toString().trim(),
@@ -667,7 +663,7 @@ public class ModelsActivity extends Activity {
             String pid = activeProviders.get(sp.getSelectedItemPosition())[0];
             List<String[]> models = table.getModels();
             if (models.isEmpty()) {
-                Ui.toast(this, "Compila almeno una riga: colonna ID");
+                Ui.toast(this, getString(R.string.fill_one_row));
                 return;
             }
             final String fpid = pid;
@@ -684,8 +680,8 @@ public class ModelsActivity extends Activity {
                                 expanded.add(fpid);
                                 table.reset();
                                 Ui.toast(ModelsActivity.this, fmodels.size() == 1
-                                        ? "Modello aggiunto"
-                                        : fmodels.size() + " modelli aggiunti");
+                                        ? getString(R.string.model_added)
+                                        : getString(R.string.models_added_n, fmodels.size()));
                                 load();
                             }
                         });
@@ -702,9 +698,9 @@ public class ModelsActivity extends Activity {
         });
 
         new AlertDialog.Builder(this)
-                .setTitle("Nuovo modello")
+                .setTitle(getString(R.string.new_model))
                 .setView(box)
-                .setPositiveButton("Chiudi", null)
+                .setPositiveButton(getString(R.string.close), null)
                 .show();
     }
 
@@ -716,7 +712,7 @@ public class ModelsActivity extends Activity {
                                   final MultiPick cb) {
         final String label = btn.getText().toString();
         btn.setEnabled(false);
-        btn.setText("Carico…");
+        btn.setText(getString(R.string.loading));
         io.execute(new Runnable() {
             @Override
             public void run() {
@@ -754,7 +750,7 @@ public class ModelsActivity extends Activity {
         int pad = Ui.dp(this, 12);
         box.setPadding(pad, pad, pad, 0);
 
-        final EditText filter = field("Filtra per id o nome…");
+        final EditText filter = field(getString(R.string.filter_hint));
         box.addView(filter);
 
         final ListView list = new ListView(this);
@@ -785,16 +781,16 @@ public class ModelsActivity extends Activity {
         });
 
         new AlertDialog.Builder(this)
-                .setTitle("Modelli disponibili (" + models.size() + ")")
+                .setTitle(getString(R.string.available_models) + models.size() + ")")
                 .setView(box)
-                .setPositiveButton("Usa selezionati", (d, w) -> {
+                .setPositiveButton(getString(R.string.use_selected), (d, w) -> {
                     List<String[]> sel = new ArrayList<>();
                     for (String[] m : models) {
                         if (checked.contains(m[0])) sel.add(m);
                     }
                     cb.on(sel);
                 })
-                .setNegativeButton("Annulla", null)
+                .setNegativeButton(getString(R.string.cancel), null)
                 .show();
     }
 

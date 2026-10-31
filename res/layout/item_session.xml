@@ -38,7 +38,7 @@
             android:fontFamily="monospace"
             android:maxLines="2"
             android:ellipsize="end"
-            android:text="Sessione" />
+            android:text="@string/session_fallback" />
 
         <TextView
             android:id="@+id/sub"

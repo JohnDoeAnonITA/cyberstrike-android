@@ -14,7 +14,7 @@
             style="@style/PipLabel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="SERVER URL" />
+            android:text="@string/lbl_server_url" />
 
         <EditText
             android:id="@+id/url"
@@ -37,7 +37,7 @@
             style="@style/PipLabel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="TOKEN (OPZIONALE)" />
+            android:text="@string/lbl_token" />
 
         <EditText
             android:id="@+id/token"
@@ -60,7 +60,7 @@
             style="@style/PipLabel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="AGENTE" />
+            android:text="@string/lbl_agent" />
 
         <Spinner
             android:id="@+id/agent"
@@ -73,7 +73,7 @@
             style="@style/PipLabel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="MODELLO" />
+            android:text="@string/lbl_model_section" />
 
         <Spinner
             android:id="@+id/model"

@@ -46,7 +46,7 @@ public class TerminalActivity extends Activity {
 
         if (Prefs.webviewDebug(this)) {
             WebView.setWebContentsDebuggingEnabled(true);
-            Diag.add("term", "WebView debugging attivo");
+            Diag.add("term", getString(R.string.webview_debug_on));
         }
 
         WebSettings s = web.getSettings();
@@ -70,7 +70,7 @@ public class TerminalActivity extends Activity {
     }
 
     private void start() {
-        title.setText("Terminale · avvio…");
+        title.setText(getString(R.string.terminal_starting));
         io.execute(new Runnable() {
             @Override
             public void run() {
@@ -84,7 +84,7 @@ public class TerminalActivity extends Activity {
                     ui.post(new Runnable() {
                         @Override
                         public void run() {
-                            title.setText("Terminale");
+                            title.setText(getString(R.string.terminal));
                             web.loadUrl("file:///android_asset/term.html?ws=" + Uri.encode(ws));
                         }
                     });
@@ -92,8 +92,8 @@ public class TerminalActivity extends Activity {
                     ui.post(new Runnable() {
                         @Override
                         public void run() {
-                            title.setText("Terminale");
-                            Diag.add("term", "PTY errore: " + e.getMessage());
+                            title.setText(getString(R.string.terminal));
+                            Diag.add("term", getString(R.string.pty_error) + e.getMessage());
                             Ui.toast(TerminalActivity.this, "PTY: " + e.getMessage());
                         }
                     });
