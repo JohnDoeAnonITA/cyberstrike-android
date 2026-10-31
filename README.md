@@ -12,11 +12,11 @@ L'interfaccia è in stile **PIP-BOY**: fosforo verde su vetro catodico, scanline
 CRT, font monospace e — in sottofondo — *I Don't Want To Set The World On Fire*
 letta dai file audio del telefono.
 
-<p align="center">
-  <img src="docs/screenshot-intro.jpg" width="31%" alt="Intro: terminale ROBCO con il minigioco di hacking">
-  <img src="docs/screenshot-sessioni.jpg" width="31%" alt="Lista delle sessioni in stile PIP-BOY">
-  <img src="docs/screenshot-chat.jpg" width="31%" alt="Chat con streaming SSE">
-</p>
+![Intro — terminale ROBCO con il minigioco di hacking](docs/screenshot-intro.jpg)
+
+![Sessioni — lista in stile PIP-BOY](docs/screenshot-sessioni.jpg)
+
+![Chat — streaming SSE con bolle, tool e tabelle](docs/screenshot-chat.jpg)
 
 ```
 ┌────────────────────────────────┐
