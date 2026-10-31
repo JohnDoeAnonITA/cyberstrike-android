@@ -1,26 +1,32 @@
 # CyberStrike Android Client
 
-> **Stato: 0.1.0 — alpha, non ancora eseguita su dispositivo.**
-> Il protocollo REST/SSE/PTY è stato verificato contro il server 1.1.16 (12/12 chiamate),
-> ma l'app non è mai stata avviata su Android. Per segnalare problemi:
-> `⋮ → Diagnostica → Copia`.
+> **Stato: 0.2.1 — in uso su dispositivo.**
+> Client nativo per il server [CyberStrike](https://cyberstrike.io): sessioni,
+> chat in streaming SSE, permessi, domande dell'agente e terminale PTY.
+> Problemi? `⋮ → Diagnostica → Copia` e incolla il report.
 
-Client Android **nativo** (REST, non WebView) per il server [CyberStrike](https://cyberstrike.io).
-APK ~150 KB, senza Gradle, senza dipendenze AndroidX.
+APK **~440 KB**, senza Gradle e senza AndroidX: un modulo Java compilato a mano
+con `aapt2` + `javac` + `d8`, impacchettato e firmato con `apksigner`.
+
+L'interfaccia è in stile **PIP-BOY**: fosforo verde su vetro catodico, scanline
+CRT, font monospace e — in sottofondo — *I Don't Want To Set The World On Fire*
+letta dai file audio del telefono.
 
 ```
-┌──────────────────────────────┐
-│  App CyberStrike (Java)      │
-│  ├─ Sessioni (ListView)      │
-│  ├─ Chat + streaming SSE     │
-│  ├─ Permessi / Domande       │
-│  └─ Terminale (PTY)          │
-└───────────┬──────────────────┘
-            │ HTTP + SSE  →  127.0.0.1:27182
-┌───────────▼──────────────────┐
-│ Termux → proot Debian        │
-│   cyberstrike web            │
-└──────────────────────────────┘
+┌────────────────────────────────┐
+│  App CyberStrike (Java)        │
+│  ├─ Sessioni (ListView)        │
+│  ├─ Chat + streaming SSE       │
+│  ├─ Permessi / Domande         │
+│  └─ Terminale (PTY)            │
+└───────────────┬────────────────┘
+                │ HTTP + SSE  →  127.0.0.1:27182
+┌───────────────▼────────────────┐
+│  Termux                        │
+│   └─ ~/.cs-supervisor.sh       │   un solo proot, riavvio interno
+│        └─ proot Debian         │
+│             └─ cyberstrike     │   serve --port 27182 --hostname 127.0.0.1
+└────────────────────────────────┘
 ```
 
 ## Cosa fa
@@ -39,11 +45,33 @@ APK ~150 KB, senza Gradle, senza dipendenze AndroidX.
 
 ## Grafica
 
-- Icona launcher e foreground adattivo ricavati da `https://cyberstrike.io/logo.svg` (ricolorato `#00E676`)
-- Tema hacker: nero verdastro `#050806`, accento neon `#00E676`
-- Sfondo animato "matrix" (`ui/MatrixView`, ~11 fps, si ferma quando la finestra non è visibile)
-- Header con logo + stato + host del baseURL configurato
-- Chat: sfondo **matrix** + watermark **Anonymous Italia** (logo ASI, alpha 16%) sopra la pioggia di glifi
+- **Palette fosforo**: fondo `#020A08`, testo `#93FFC6`, accento `#3CFF8F`,
+  errore `#FF6A3D`. Bordi squadrati (2-3 dp), pannelli con barra accento.
+- **`ui/CrtOverlay`**: scanline orizzontali, vignettatura e banda luminosa che
+  scende lentamente. Presente su sessioni, chat, modelli e terminale; non
+  intercetta i tocchi.
+- **`ui/BootScreen`** (intro, ~5 s, un tocco la salta):
+  intestazione `ROBCO INDUSTRIES (TM) TERMLINK PROTOCOL`, griglia di 16 password
+  esadecimali, tre tentativi con `LIKENESS=`, `ACCESS GRANTED` e infine le righe
+  di avvio di CyberStrike OS.
+- **Font**: *Share Tech Mono* (SIL OFL 1.1) in
+  `assets/fonts/pip.ttf`, applicato a tutte le activity da `CsApp`; le viste con
+  tag `nofont` (emoji) restano sul font di sistema.
+- **Icone** launcher e foreground adattivo generate come gauge circolare con
+  tacche e lancetta.
+
+## Audio
+
+`util/Ambient.java` cerca la traccia fra i file audio del dispositivo:
+`MediaStore` con `DISPLAY_NAME LIKE '%set the world%'` e `SIZE > 100 KB`,
+altrimenti scansione di `Download/`. Riproduce in loop a volume 0.5, mette in
+pausa quando l'app va in background (conteggio delle activity avviate in
+`CsApp`) e rispetta l'audio focus.
+
+Il brano **non è incluso nell'APK** (è protetto da copyright): viene letto dal
+file locale. Serve il permesso di lettura audio — `READ_MEDIA_AUDIO` su Android
+13+, `READ_EXTERNAL_STORAGE` fino ad Android 12 — richiesto una volta ~3 s dopo
+l'intro. On/off da `⋮ → Musica: ON/OFF`.
 
 ## Requisiti
 
@@ -69,14 +97,30 @@ Al primo avvio l'app:
 
 1. verifica se il server risponde su `127.0.0.1:27182`;
 2. se non risponde, esegue `assets/bootstrap.sh` dentro Termux:
-   - installa `proot-distro` se manca;
-   - installa Debian se manca;
+   - installa `proot-distro` e Debian se mancano;
    - installa `curl`/`tar` nel container;
-   - scarica e installa CyberStrike se `~/.cyberstrike/bin/cyberstrike` non esiste;
-   - avvia `cyberstrike web` su `127.0.0.1:27182`;
-3. attende che `/global/health` risponda (fino a 30 minuti al primo avvio).
+   - scarica CyberStrike se `~/.cyberstrike/bin/cyberstrike` non esiste;
+   - genera la password del server in `~/.cs-server-password`;
+   - scrive e avvia il supervisor `~/.cs-supervisor.sh`;
+3. attende che la porta risponda (fino a 30 minuti al primo avvio).
 
-Il log dell'installazione è in `~/.cyberstrike-setup.log` (dentro Termux).
+Il log del setup è in `~/.cyberstrike-setup.log`, quello del server in
+`~/.cyberstrike-server.log` (dentro Termux). Il sentinel `~/.cs-setup.done`
+indica che l'installazione è già stata fatta: dai avvii successivi il bootstrap
+salta installazione e verifiche.
+
+### Supervisor e riavvii
+
+Il server gira dentro **un solo** `proot` gestito da `~/.cs-supervisor.sh`:
+
+```bash
+while true; do cyberstrike serve --port 27182 --hostname 127.0.0.1; sleep 5; done
+```
+
+Il loop sta *dentro* il container: se il server muore viene riavviato senza
+creare nuovi processi `proot`. È la contromisura al *phantom process killer* di
+Android 12+, che chiude Termux (SIGKILL) quando i processi figli si accumulano.
+Se il crash è immediato il supervisor aspetta con backoff 5 s → 180 s.
 
 ### Porta
 
@@ -95,6 +139,9 @@ Menu `⋮` → **Impostazioni**:
 - **Modello** — provider/modello da `/config/providers`.
 - **Avvio automatico** — bootstrap all'apertura.
 
+Altri comandi del menu `⋮`: nuova sessione, terminale, aggiorna,
+**installa / avvia server** (bootstrap a mano), apri Termux, diagnostica,
+richiedi permesso Termux, modelli e provider, musica on/off.
 
 ## Modelli e provider
 
@@ -153,7 +200,9 @@ L'app applica:
 ### GitHub Actions
 
 Push su `main` → artifact `cyberstrike-client-apk`.
-Tag `v*` → build + release automatica con APK firmato.
+Tag `v*` → build + release automatica con APK firmato. Il `versionCode` viene
+derivato dal nome versione: `0.2.1 → 201`, `1.0.0 → 10000`
+(`major*10000 + minor*100 + patch`), così build locali e CI restano monotone.
 
 Per una chiave di firma stabile, imposta il secret `KEYSTORE_B64`
 (base64 di un keystore JKS, alias `cyberstrike`, password `android`):
@@ -165,12 +214,12 @@ base64 -w0 ks.jks | gh secret set KEYSTORE_B64 -R <owner>/<repo>
 ### Locale (Termux/Debian, senza Gradle)
 
 ```bash
-bash build.sh /path/to/android.jar /path/to/build-tools/34.0.0
+VERSION_NAME=0.2.1 bash build.sh /path/to/android.jar /path/to/build-tools/34.0.0
 ```
 
 Servono `aapt2`, `zipalign`, `apksigner`, `javac`, `keytool`.
 Lo script scarica una volta R8 in `.build/` (il `d8` dei build-tools 34 va in
-crash su classi anonime compilate da JDK 21).
+crash su classi anonime compilate da JDK 21) e genera `cyberstrike-client.apk`.
 
 ## Struttura
 
@@ -178,20 +227,48 @@ crash su classi anonime compilate da JDK 21).
 AndroidManifest.xml
 build.sh
 assets/
-  bootstrap.sh      # setup Termux + Debian + CyberStrike
-  term.html         # terminale xterm.js (solo widget)
+  bootstrap.sh        # setup Termux + Debian + CyberStrike + supervisor
+  fonts/pip.ttf       # Share Tech Mono (OFL 1.1) + OFL.txt
+  term.html           # terminale xterm.js (solo widget)
   xterm.js/.css
-res/                # layout, temi, icone
+res/
+  layout/             # activity_*, item_*, dlg_settings
+  drawable/           # pannelli, bolle, chip, input, header
+  values/             # colors (palette fosforo), styles, strings
+  mipmap-*/           # icone launcher
 src/com/cyberstrike/client/
-  MainActivity.java      # sessioni, stato server, setup
-  ChatActivity.java      # chat, SSE, permessi, domande
+  CsApp.java             # font globale + ciclo di vita della musica
+  MainActivity.java      # sessioni, stato server, setup, menu
+  ChatActivity.java      # chat, SSE, permessi, domande, allegati
+  ModelsActivity.java    # provider e modelli
   TerminalActivity.java  # PTY WebSocket
   api/CsClient.java      # REST
   api/EventStream.java   # SSE
-  ui/MsgAdapter.java
-  util/                  # prefs, bootstrap, termux
+  ui/CrtOverlay.java     # scanline + vignettatura + sweep
+  ui/BootScreen.java     # intro ROBCO + hacking + avvio
+  ui/MsgAdapter.java     # messaggi, bolle, immagini, tabelle
+  ui/TableView.java
+  util/Ambient.java      # colonna sonora da file locale
+  util/Fonts.java        # font monospace dagli asset
+  util/Prefs.java        # preferenze
+  util/Bootstrap.java    # avvio script in Termux
 ```
+
+## Changelog
+
+- **0.2.1** — intro: schermata di hacking terminale ROBCO (password, `LIKENESS`,
+  `ACCESS GRANTED`), saltabile con un tocco.
+- **0.2.0** — restyle completo in stile PIP-BOY: palette fosforo, CRT overlay,
+  font Share Tech Mono, icone nuove, intro ROBCO e colonna sonora.
+- **0.1.27** — un solo supervisor dentro il proot (meno processi figli, riavvii
+  senza nuovi `proot`); rimosso il bootstrap automatico a ogni disconnessione SSE.
+- **0.1.26** — "Installa / avvia server" controlla lo stato fuori dal thread UI e
+  installa subito il watchdog.
+- **0.1.25** — riavvio automatico del server e pulsante **Ferma** con feedback.
+- **0.1.24** — domande pendenti all'apertura, comandi bash completi, pulsante
+  "torna in fondo".
 
 ## Licenza
 
-MIT
+MIT. Il font *Share Tech Mono* è distribuito con licenza SIL Open Font License
+1.1 (vedi `assets/fonts/OFL.txt`).
